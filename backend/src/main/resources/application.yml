@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/studyhub}
+    username: ${SPRING_DATASOURCE_USERNAME:studyhub}
+    password: ${SPRING_DATASOURCE_PASSWORD:studyhub}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+server:
+  error:
+    include-message: never
+studyhub:
+  jwt:
+    secret: ${STUDYHUB_JWT_SECRET:development-secret-must-be-replaced-by-a-strong-64-byte-value}
