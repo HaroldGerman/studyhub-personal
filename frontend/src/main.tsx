@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BookOpen, CalendarDays, CheckCircle2, ChevronRight, FileText, LayoutDashboard, MoreHorizontal, Plus, Search, Settings, Sparkles, Star, X } from 'lucide-react';
 import './styles.css';
@@ -11,8 +11,10 @@ const initialCourses: Course[] = [
 ];
 const nav = [{id:'dashboard',label:'Dashboard',icon:LayoutDashboard},{id:'courses',label:'Cursos',icon:BookOpen},{id:'notes',label:'Notas',icon:FileText},{id:'calendar',label:'Calendario',icon:CalendarDays}];
 
+function Login({done}:{done:(name:string)=>void}){const setup=!localStorage.getItem('sh-account');const [error,setError]=useState('');const submit=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const f=new FormData(e.currentTarget),user=String(f.get('user')),pass=String(f.get('password'));if(setup){localStorage.setItem('sh-account',JSON.stringify({user,pass}));done(user)}else{const a=JSON.parse(localStorage.getItem('sh-account')||'{}');a.user===user&&a.pass===pass?done(user):setError('Credenciales incorrectas')}};return <div className="login"><form className="modal" onSubmit={submit}><div className="brand"><span className="brandmark">S</span>studyhub</div><h1>{setup?'Crea tu acceso':'Inicia sesión'}</h1><p className="muted">{setup?'Tu espacio será privado en este dispositivo.':'Bienvenido de nuevo.'}</p><label>Usuario<input required name="user" defaultValue={setup?'Harold':''}/></label><label>Contraseña<input required minLength={6} name="password" type="password"/></label>{error&&<p>{error}</p>}<button className="primary">{setup?'Crear acceso':'Entrar'}</button></form></div>}
 function App(){
- const [page,setPage]=useState('dashboard'), [courses,setCourses]=useState(initialCourses), [query,setQuery]=useState(''), [modal,setModal]=useState(false), [dark,setDark]=useState(false);
+ const [session,setSession]=useState(()=>localStorage.getItem('sh-session')||''), [page,setPage]=useState('dashboard'), [courses,setCourses]=useState<Course[]>(()=>JSON.parse(localStorage.getItem('sh-courses')||'null')||initialCourses), [query,setQuery]=useState(''), [modal,setModal]=useState(false), [dark,setDark]=useState(false);
+ useEffect(()=>localStorage.setItem('sh-courses',JSON.stringify(courses)),[courses]); if(!session)return <Login done={name=>{localStorage.setItem('sh-session',name);setSession(name)}}/>;
  const found=useMemo(()=>courses.filter(c=>c.title.toLowerCase().includes(query.toLowerCase())),[courses,query]);
  const addCourse=(form:FormData)=>{ const title=String(form.get('title')||'Nuevo curso'); setCourses([...courses,{id:Date.now(),title,code:String(form.get('code')||'SIN-CÓDIGO'),professor:String(form.get('professor')||'Por asignar'),color:'#e66c5a',progress:0,lessons:0,completed:0,status:'No iniciado',icon:'✦'}]); setModal(false);setPage('courses') };
  return <div className={dark?'app dark':'app'}>
