@@ -23,6 +23,36 @@ public class EmailService {
                       "Si no solicitaste esta cuenta, por favor ignora este correo.\n\n" +
                       "Saludos,\nEl equipo de StudyHub";
 
+        // Try Resend HTTP API first if API key is provided
+        String resendApiKey = System.getenv("RESEND_API_KEY");
+        if (resendApiKey != null && !resendApiKey.trim().isEmpty()) {
+            try {
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                String cleanName = name.replace("\"", "\\\"");
+                String json = "{"
+                    + "\"from\":\"StudyHub <onboarding@resend.dev>\","
+                    + "\"to\":[\"" + to + "\"],"
+                    + "\"subject\":\"Verifica tu cuenta - StudyHub\","
+                    + "\"text\":\"Hola " + cleanName + ",\\n\\nGracias por registrarte en StudyHub. Tu código de verificación de 6 dígitos es:\\n\\n➡️   " + code + "   ⬅️\\n\\nEste código es válido por 15 minutos.\\n\\nSaludos,\\nEl equipo de StudyHub\""
+                    + "}";
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://api.resend.com/emails"))
+                    .header("Authorization", "Bearer " + resendApiKey)
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+                java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                    System.out.println("Email de verificación enviado exitosamente vía Resend HTTP API a: " + to);
+                    return;
+                } else {
+                    System.err.println("Fallo al enviar correo vía Resend HTTP API: " + response.statusCode() + " - " + response.body());
+                }
+            } catch (Exception e) {
+                System.err.println("Error enviando email vía Resend HTTP API: " + e.getMessage());
+            }
+        }
+
         if (mailSender != null) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
@@ -34,7 +64,7 @@ public class EmailService {
                 System.out.println("Email de verificación enviado a: " + to);
                 return;
             } catch (Exception e) {
-                System.err.println("Error enviando email real: " + e.getMessage());
+                System.err.println("Error enviando email real vía SMTP: " + e.getMessage());
             }
         }
 
