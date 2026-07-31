@@ -1,10 +1,12 @@
 package app.studyhub.api;
-import app.studyhub.domain.CourseStatus;
-import jakarta.validation.constraints.NotBlank;
-import java.time.LocalDate;
 
-public record CourseRequest(
-    @NotBlank String title,
+import app.studyhub.domain.CourseStatus;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record CourseResponse(
+    UUID id,
+    String title,
     String code,
     String description,
     String professor,
@@ -14,5 +16,8 @@ public record CourseRequest(
     LocalDate endDate,
     CourseStatus status,
     String color,
-    String icon
+    String icon,
+    int lessons,
+    int completed,
+    int progress
 ) {}

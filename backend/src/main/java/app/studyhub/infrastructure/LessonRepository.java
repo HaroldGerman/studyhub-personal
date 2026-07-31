@@ -1,0 +1,11 @@
+package app.studyhub.infrastructure;
+
+import app.studyhub.domain.Lesson;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface LessonRepository extends JpaRepository<Lesson,UUID>{
+    List<Lesson> findByCourseId(UUID courseId);
+    List<Lesson> findByCourseIdAndCourseUserEmail(UUID courseId, String email);
+}

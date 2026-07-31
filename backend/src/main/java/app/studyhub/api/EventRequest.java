@@ -1,0 +1,1 @@
+package app.studyhub.api; import jakarta.validation.constraints.*; import java.time.LocalDateTime; public record EventRequest(@NotBlank String title,String description,@NotNull LocalDateTime dateTime,String color){}

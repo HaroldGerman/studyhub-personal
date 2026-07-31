@@ -1,8 +1,13 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/studyhub}
-    username: ${SPRING_DATASOURCE_USERNAME:studyhub}
-    password: ${SPRING_DATASOURCE_PASSWORD:studyhub}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/studyhub;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   jpa:
     hibernate:
       ddl-auto: update
