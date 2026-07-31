@@ -701,6 +701,7 @@ function App() {
             onNewCourse={() => setModalOpen(true)}
             notesCount={notes.length}
             setPage={setPage}
+            profile={profile}
           />
         )}
 
@@ -773,7 +774,8 @@ function Dashboard({
   onSelectCourse,
   onNewCourse,
   notesCount,
-  setPage
+  setPage,
+  profile
 }: {
   courses: Course[];
   events: CalendarEvent[];
@@ -782,6 +784,7 @@ function Dashboard({
   onNewCourse: () => void;
   notesCount: number;
   setPage: (p: string) => void;
+  profile: UserProfile | null;
 }) {
   const totalClasses = useMemo(() => courses.reduce((acc, c) => acc + c.lessons, 0), [courses]);
   const completedClasses = useMemo(() => courses.reduce((acc, c) => acc + c.completed, 0), [courses]);
@@ -792,12 +795,24 @@ function Dashboard({
       .slice(0, 3);
   }, [events]);
 
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    const name = profile?.name ? `, ${profile.name.split(' ')[0]}` : '';
+    if (hour < 12) {
+      return `Buenos días${name}`;
+    } else if (hour < 19) {
+      return `Buenas tardes${name}`;
+    } else {
+      return `Buenas noches${name}`;
+    }
+  }, [profile]);
+
   return (
     <div className="page fade-in">
       <div className="hero">
         <div>
           <p className="eyebrow">{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}</p>
-          <h1>Buenos días <span>✦</span></h1>
+          <h1>{greeting} <span>✦</span></h1>
           <p className="muted">Tu panel personal de aprendizaje y metas de estudio.</p>
         </div>
         <button className="primary" onClick={onNewCourse}>
