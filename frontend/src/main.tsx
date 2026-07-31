@@ -98,6 +98,8 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
 // Login & Register Component
 function Login({ done }: { done: (token: string, email: string) => void }) {
   const [isRegister, setIsRegister] = useState(false);
+  const [showVerify, setShowVerify] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -115,14 +117,17 @@ function Login({ done }: { done: (token: string, email: string) => void }) {
 
     try {
       if (isRegister) {
-        const res = await apiFetch<{ accessToken: string }>(`/api/auth/register`, {
+        const res = await apiFetch<{ verificationRequired: boolean; email: string }>(`/api/auth/register`, {
           method: 'POST',
           body: JSON.stringify({ name, email, password }),
         });
-        setSuccess('Cuenta creada. Iniciando sesión...');
-        setTimeout(() => {
-          done(res.accessToken, email);
-        }, 1000);
+        if (res.verificationRequired) {
+          setVerifyEmail(res.email);
+          setShowVerify(true);
+          setSuccess('Cuenta registrada. Por favor ingresa el código de 6 dígitos enviado a tu correo.');
+        } else {
+          setSuccess('Cuenta creada con éxito.');
+        }
       } else {
         const res = await apiFetch<{ accessToken: string }>(`/api/auth/login`, {
           method: 'POST',
@@ -136,6 +141,70 @@ function Login({ done }: { done: (token: string, email: string) => void }) {
       setLoading(false);
     }
   };
+
+  const submitVerify = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    const f = new FormData(e.currentTarget);
+    const code = String(f.get('code') || '');
+
+    try {
+      const res = await apiFetch<{ accessToken: string }>(`/api/auth/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ email: verifyEmail, code }),
+      });
+      setSuccess('Cuenta verificada con éxito. Iniciando sesión...');
+      setTimeout(() => {
+        done(res.accessToken, verifyEmail);
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message || 'Código inválido o expirado');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (showVerify) {
+    return (
+      <div className="login-page">
+        <div className="login-card glass">
+          <div className="brand">
+            <span className="brandmark">S</span>studyhub
+          </div>
+          <h1>Verifica tu cuenta</h1>
+          <p className="muted">
+            Hemos enviado un código de 6 dígitos a <b>{verifyEmail}</b>. Ingrésalo a continuación para activar tu espacio.
+          </p>
+
+          <form onSubmit={submitVerify}>
+            <label>
+              Código de Verificación
+              <div className="input-with-icon">
+                <Lock size={16} />
+                <input required maxLength={6} minLength={6} name="code" placeholder="123456" style={{ letterSpacing: '4px', textAlign: 'center', fontSize: '18px', fontWeight: 'bold' }} />
+              </div>
+            </label>
+
+            {error && <div className="error-alert">{error}</div>}
+            {success && <div className="success-alert">{success}</div>}
+
+            <button className="primary submit-btn" type="submit" disabled={loading}>
+              {loading ? 'Verificando...' : 'Activar Cuenta'}
+            </button>
+          </form>
+
+          <div className="login-footer">
+            <button className="link-btn" onClick={() => { setShowVerify(false); setError(''); setSuccess(''); }}>
+              Volver al inicio de sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">
@@ -184,7 +253,7 @@ function Login({ done }: { done: (token: string, email: string) => void }) {
         </form>
 
         <div className="login-footer">
-          <button className="link-btn" onClick={() => { setIsRegister(!isRegister); setError(''); }}>
+          <button className="link-btn" onClick={() => { setIsRegister(!isRegister); setError(''); setSuccess(''); }}>
             {isRegister ? '¿Ya tienes una cuenta? Inicia sesión' : '¿No tienes cuenta? Registrate gratis'}
           </button>
         </div>
