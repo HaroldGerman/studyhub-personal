@@ -1871,14 +1871,10 @@ function Calendar({
     const startStr = startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
     
     const titleLower = e.title.toLowerCase();
-    if (titleLower.includes("data science")) {
+    if (titleLower.includes("data engineer")) {
       return `${startStr} - 10:30`;
-    } else if (titleLower.includes("java backend") || (titleLower.includes("data engineer") && startStr === "10:45")) {
-      return `${startStr} - 12:45`;
-    } else if (titleLower.includes("data analyst")) {
-      return `${startStr} - 16:00`;
-    } else if (titleLower.includes("cloud & devops") || (titleLower.includes("data engineer") && startStr === "16:15")) {
-      return `${startStr} - 18:15`;
+    } else if (titleLower.includes("java backend") || titleLower.includes("java")) {
+      return `${startStr} - 13:00`;
     } else if (titleLower.includes("inglés") || titleLower.includes("ingles")) {
       return `${startStr} - 20:00`;
     }

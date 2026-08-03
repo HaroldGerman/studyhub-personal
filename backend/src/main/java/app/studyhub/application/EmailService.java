@@ -29,8 +29,13 @@ public class EmailService {
             try {
                 java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
                 String cleanName = name.replace("\"", "\\\"");
+                String fromEmail = System.getenv("RESEND_FROM_EMAIL");
+                if (fromEmail == null || fromEmail.trim().isEmpty()) {
+                    fromEmail = "StudyHub <onboarding@resend.dev>";
+                }
+                String cleanFrom = fromEmail.replace("\"", "\\\"");
                 String json = "{"
-                    + "\"from\":\"StudyHub <onboarding@resend.dev>\","
+                    + "\"from\":\"" + cleanFrom + "\","
                     + "\"to\":[\"" + to + "\"],"
                     + "\"subject\":\"Verifica tu cuenta - StudyHub\","
                     + "\"text\":\"Hola " + cleanName + ",\\n\\nGracias por registrarte en StudyHub. Tu código de verificación de 6 dígitos es:\\n\\n➡️   " + code + "   ⬅️\\n\\nEste código es válido por 15 minutos.\\n\\nSaludos,\\nEl equipo de StudyHub\""

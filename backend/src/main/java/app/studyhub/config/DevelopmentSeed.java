@@ -16,8 +16,8 @@ import org.springframework.context.annotation.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -44,28 +44,24 @@ class DevelopmentSeed {
                 return users.save(u);
             });
 
-            // 2. Clean up Data Engineer if present
+            // 2. Clean up unwanted courses
             courses.findByUserEmail(user.getEmail()).stream()
-                .filter(c -> c.getCode().equalsIgnoreCase("DE-301") || c.getTitle().equalsIgnoreCase("Data Engineer"))
-                .findFirst()
-                .ifPresent(c -> {
-                    System.out.println("Eliminando curso y lecciones de Data Engineer según solicitud del usuario...");
-                    List<Lesson> deLessons = lessons.findByCourseId(c.getId());
-                    lessons.deleteAll(deLessons);
+                .filter(c -> !c.getTitle().equalsIgnoreCase("Java") 
+                          && !c.getTitle().equalsIgnoreCase("Inglés") 
+                          && !c.getTitle().equalsIgnoreCase("Data Engineer"))
+                .forEach(c -> {
+                    System.out.println("Eliminando curso no deseado: " + c.getTitle());
+                    List<Lesson> cLessons = lessons.findByCourseId(c.getId());
+                    lessons.deleteAll(cLessons);
                     courses.delete(c);
-                    System.out.println("Curso de Data Engineer eliminado correctamente.");
                 });
 
-            // 3. Seed Java course (original)
+            // 3. Seed active courses
             seedJava(user, courses, lessons);
-
-            // 4. Seed other active courses
             seedEnglish(user, courses, lessons);
-            seedDataScience(user, courses, lessons);
-            seedDataAnalyst(user, courses, lessons);
-            seedCloudDevOps(user, courses, lessons);
+            seedDataEngineer(user, courses, lessons);
 
-            // 4.5. Seed Recovered Notes (from lost H2 memory state)
+            // 4. Seed Recovered Notes (from lost H2 memory state)
             seedRecoveredNotes(user, courses, lessons, noteRepository);
 
             // 5. Seed Schedule (Events)
@@ -74,7 +70,6 @@ class DevelopmentSeed {
     }
 
     private void seedSchedule(User user, EventRepository eventRepository) {
-        // Clear previous study events to apply new schedule distribution
         System.out.println("Actualizando horario de estudio en el calendario...");
         List<Event> existingStudyEvents = eventRepository.findByUserEmailOrderByDateTimeAsc(user.getEmail()).stream()
             .filter(e -> e.getTitle().startsWith("Estudio:"))
@@ -87,61 +82,23 @@ class DevelopmentSeed {
             for (int d = 0; d < 5; d++) { // Lunes a Viernes
                 LocalDate date = startDate.plusWeeks(w).plusDays(d);
 
-                // Data Science (Lunes a Viernes 08:30 - 10:30)
-                createEvent(user, eventRepository, "Estudio: Data Science", 
-                    "Revisar temas de scikit-learn, álgebra lineal, PyTorch o EDA.", 
-                    date.atTime(8, 30), "#2ed573");
+                // Data Engineer (Lunes a Viernes 08:30 - 10:30)
+                createEvent(user, eventRepository, "Estudio: Data Engineer", 
+                    "Linux, SQL, Python, orquestación, Spark o modelado de pipelines.", 
+                    date.atTime(8, 30), "#ffa502");
                 count++;
 
-                // Data Analyst (Lunes a Viernes 14:00 - 16:00)
-                createEvent(user, eventRepository, "Estudio: Data Analyst", 
-                    "Práctica de Excel avanzado, consultas SQL complejas o dashboards interactivos.", 
-                    date.atTime(14, 0), "#ffa502");
+                // Java Backend (Lunes a Viernes 11:00 - 13:00)
+                createEvent(user, eventRepository, "Estudio: Java Backend", 
+                    "Microservicios con Spring Boot, seguridad REST y testing unitario.", 
+                    date.atTime(11, 0), "#7257e8");
                 count++;
 
                 // Inglés (Lunes a Viernes 18:30 - 20:00)
                 createEvent(user, eventRepository, "Estudio: Inglés", 
-                    "Inmersión en conversación, ampliación de vocabulario y listening activo.", 
+                    "Conversación, vocabulario técnico y listening activo.", 
                     date.atTime(18, 30), "#ff4757");
                 count++;
-
-                if (d == 0 || d == 2 || d == 4) { // Lunes, Miércoles, Viernes
-                    // Java Backend (10:45 - 12:45)
-                    createEvent(user, eventRepository, "Estudio: Java Backend", 
-                        "Construcción de microservicios con Spring Boot, H2 y seguridad REST.", 
-                        date.atTime(10, 45), "#7257e8");
-                    count++;
-
-                    // Cloud & DevOps (16:15 - 18:15)
-                    createEvent(user, eventRepository, "Estudio: Cloud & DevOps", 
-                        "Configuración de contenedores Docker, despliegue en Kubernetes y pipelines de CI/CD.", 
-                        date.atTime(16, 15), "#3742fa");
-                    count++;
-                } else if (d == 1) { // Martes
-                    // Data Science (10:45 - 12:45) -> Expandido para priorizarlo
-                    createEvent(user, eventRepository, "Estudio: Data Science", 
-                        "Profundizar en matemáticas para ML y análisis de algoritmos avanzados.", 
-                        date.atTime(10, 45), "#2ed573");
-                    count++;
-
-                    // Cloud & DevOps (16:15 - 18:15) -> Expandido
-                    createEvent(user, eventRepository, "Estudio: Cloud & DevOps", 
-                        "Automatización de infraestructura con Terraform, Ansible y control cloud.", 
-                        date.atTime(16, 15), "#3742fa");
-                    count++;
-                } else if (d == 3) { // Jueves
-                    // Java Backend (10:45 - 12:45) -> Expandido
-                    createEvent(user, eventRepository, "Estudio: Java Backend", 
-                        "Especialización en patrones de diseño arquitectónicos y testing unitario.", 
-                        date.atTime(10, 45), "#7257e8");
-                    count++;
-
-                    // Data Science (16:15 - 18:15) -> Expandido para priorizarlo
-                    createEvent(user, eventRepository, "Estudio: Data Science", 
-                        "Práctica e implementación de Deep Learning y modelos de lenguaje (LLMs).", 
-                        date.atTime(16, 15), "#2ed573");
-                    count++;
-                }
             }
         }
         System.out.println("Se registraron " + count + " bloques de estudio actualizados en el calendario.");
@@ -175,59 +132,62 @@ class DevelopmentSeed {
                 return courses.save(c);
             });
 
-        File file = new File("C:/Users/Harold/Downloads/silabo_java_backend.md");
-        if (file.exists()) {
-            System.out.println("Cargando sílabo de Java Backend desde: " + file.getAbsolutePath());
-            try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
-                String line;
-                String currentWeek = "Semana 1";
-                int count = 0;
-                List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+        try (InputStream is = getClass().getResourceAsStream("/syllabi/java.md")) {
+            if (is != null) {
+                System.out.println("Cargando sílabo de Java Backend desde recursos...");
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                    String line;
+                    String currentWeek = "Semana 1";
+                    int count = 0;
+                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
 
-                while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    if (line.startsWith("### 📅")) {
-                        int idx = line.toUpperCase().indexOf("SEMANA");
-                        if (idx != -1) {
-                            String rest = line.substring(idx);
-                            String[] parts = rest.split("\\s+");
-                            if (parts.length >= 2) {
-                                currentWeek = "Semana " + parts[1];
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.startsWith("### 📅")) {
+                            int idx = line.toUpperCase().indexOf("SEMANA");
+                            if (idx != -1) {
+                                String rest = line.substring(idx);
+                                String[] parts = rest.split("\\s+");
+                                if (parts.length >= 2) {
+                                    currentWeek = "Semana " + parts[1];
+                                }
                             }
                         }
-                    }
-                    if (line.startsWith("|") && line.endsWith("|")) {
-                        String[] parts = line.split("\\|");
-                        if (parts.length >= 3) {
-                            String day = parts[1].trim();
-                            String topic = parts[2].trim();
-                            
-                            if (!day.equalsIgnoreCase("Día") && 
-                                !day.startsWith("---") && 
-                                !day.isEmpty() && 
-                                !topic.isEmpty() && 
-                                !topic.startsWith("---")) {
+                        if (line.startsWith("|") && line.endsWith("|")) {
+                            String[] parts = line.split("\\|");
+                            if (parts.length >= 3) {
+                                String day = parts[1].trim();
+                                String topic = parts[2].trim();
                                 
-                                String lessonTitle = currentWeek + " · " + day + ": " + topic;
-                                boolean exists = existingLessons.stream()
-                                    .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
-                                
-                                if (!exists) {
-                                    Lesson l = new Lesson();
-                                    l.setTitle(lessonTitle);
-                                    l.setCompleted(false);
-                                    l.setCourse(course);
-                                    lessons.save(l);
-                                    count++;
+                                if (!day.equalsIgnoreCase("Día") && 
+                                    !day.startsWith("---") && 
+                                    !day.isEmpty() && 
+                                    !topic.isEmpty() && 
+                                    !topic.startsWith("---")) {
+                                    
+                                    String lessonTitle = currentWeek + " · " + day + ": " + topic;
+                                    boolean exists = existingLessons.stream()
+                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
+                                    
+                                    if (!exists) {
+                                        Lesson l = new Lesson();
+                                        l.setTitle(lessonTitle);
+                                        l.setCompleted(false);
+                                        l.setCourse(course);
+                                        lessons.save(l);
+                                        count++;
+                                    }
                                 }
                             }
                         }
                     }
+                    System.out.println("Se agregaron " + count + " clases nuevas al curso de Java.");
                 }
-                System.out.println("Se agregaron " + count + " clases nuevas al curso de Java.");
-            } catch (Exception e) {
-                System.err.println("Error al leer el archivo de sílabo de Java: " + e.getMessage());
+            } else {
+                System.err.println("No se encontró el archivo de sílabo de Java en los recursos.");
             }
+        } catch (Exception e) {
+            System.err.println("Error al leer el archivo de sílabo de Java: " + e.getMessage());
         }
     }
 
@@ -249,189 +209,39 @@ class DevelopmentSeed {
                 return courses.save(c);
             });
 
-        File file = new File("C:/Users/Harold/.gemini/antigravity/brain/1b3b9d84-70b5-4b9c-bf53-5757a211f499/syllabus_ingles_2_meses.md");
-        if (file.exists()) {
-            System.out.println("Cargando sílabo de Inglés desde: " + file.getAbsolutePath());
-            try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
-                String line;
-                String currentWeek = "Semana 1";
-                int count = 0;
-                List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+        try (InputStream is = getClass().getResourceAsStream("/syllabi/english.md")) {
+            if (is != null) {
+                System.out.println("Cargando sílabo de Inglés desde recursos...");
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                    String line;
+                    String currentWeek = "Semana 1";
+                    int count = 0;
+                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
 
-                while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    if (line.toUpperCase().startsWith("### SEMANA")) {
-                        String clean = line.replace("#", "").trim();
-                        int dashIdx = clean.indexOf("—");
-                        if (dashIdx != -1) {
-                            currentWeek = clean.substring(0, dashIdx).trim();
-                        } else {
-                            currentWeek = clean;
-                        }
-                    }
-                    if (line.startsWith("|") && line.endsWith("|")) {
-                        String[] parts = line.split("\\|");
-                        if (parts.length >= 4) {
-                            String day = parts[1].trim().replace("**", "");
-                            String topic = parts[2].trim().replace("✅", "").replace("❌", "").trim();
-                            
-                            if (day.toLowerCase().contains("clase") && 
-                                !day.equalsIgnoreCase("Clase") && 
-                                !day.startsWith("---") && 
-                                !topic.isEmpty() && 
-                                !topic.startsWith("---")) {
-                                
-                                String lessonTitle = currentWeek + " · " + day + ": " + topic;
-                                boolean exists = existingLessons.stream()
-                                    .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
-                                
-                                if (!exists) {
-                                    Lesson l = new Lesson();
-                                    l.setTitle(lessonTitle);
-                                    l.setCompleted(false);
-                                    l.setCourse(course);
-                                    lessons.save(l);
-                                    count++;
-                                }
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.toUpperCase().startsWith("### SEMANA")) {
+                            String clean = line.replace("#", "").trim();
+                            int dashIdx = clean.indexOf("—");
+                            if (dashIdx != -1) {
+                                currentWeek = clean.substring(0, dashIdx).trim();
+                            } else {
+                                currentWeek = clean;
                             }
                         }
-                    }
-                }
-                System.out.println("Se agregaron " + count + " clases nuevas al curso de Inglés.");
-            } catch (Exception e) {
-                System.err.println("Error al leer el archivo de sílabo de Inglés: " + e.getMessage());
-            }
-        }
-    }
-
-    private void seedDataScience(User user, CourseRepository courses, LessonRepository lessons) {
-        Course course = courses.findByUserEmail(user.getEmail()).stream()
-            .filter(c -> c.getCode().equalsIgnoreCase("DS-401") || c.getTitle().equalsIgnoreCase("Data Science"))
-            .findFirst()
-            .orElseGet(() -> {
-                Course c = new Course();
-                c.setTitle("Data Science");
-                c.setCode("DS-401");
-                c.setProfessor("Antigravity DS");
-                c.setUniversity("StudyHub Academy");
-                c.setPlatform("Local");
-                c.setColor("#2ed573");
-                c.setIcon("🧪");
-                c.setUser(user);
-                c.setStatus(CourseStatus.NOT_STARTED);
-                return courses.save(c);
-            });
-
-        File file = new File("C:/Users/Harold/.gemini/antigravity/brain/0f6ff60c-8e1c-45ce-8330-bb3e890cf4ef/silabo_data_science.md");
-        if (file.exists()) {
-            System.out.println("Cargando sílabo de Data Science desde: " + file.getAbsolutePath());
-            try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
-                String line;
-                String currentModule = "Módulo 0";
-                int count = 0;
-                List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
-
-                while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    if (line.startsWith("## 📌 MÓDULO") || line.startsWith("## MÓDULO")) {
-                        String clean = line.replace("#", "").replace("📌", "").trim();
-                        int dashIdx = clean.indexOf("—");
-                        if (dashIdx != -1) {
-                            currentModule = clean.substring(0, dashIdx).trim();
-                        } else {
-                            currentModule = clean;
-                        }
-                    }
-                    if (line.startsWith("|") && line.endsWith("|")) {
-                        String[] parts = line.split("\\|");
-                        if (parts.length >= 4) {
-                            String classNum = parts[1].trim();
-                            String topic = parts[2].trim().replace("⚡", "").trim();
-                            
-                            if (!classNum.equalsIgnoreCase("#") && 
-                                !classNum.startsWith("---") && 
-                                !classNum.isEmpty() &&
-                                !topic.isEmpty() && 
-                                !topic.startsWith("---") &&
-                                (classNum.contains(".") || classNum.equalsIgnoreCase("📁"))) {
+                        if (line.startsWith("|") && line.endsWith("|")) {
+                            String[] parts = line.split("\\|");
+                            if (parts.length >= 4) {
+                                String day = parts[1].trim().replace("**", "");
+                                String topic = parts[2].trim().replace("✅", "").replace("❌", "").trim();
                                 
-                                String prefix = classNum.equalsIgnoreCase("📁") ? "Proyecto" : "Clase " + classNum;
-                                String lessonTitle = currentModule + " · " + prefix + ": " + topic;
-                                boolean exists = existingLessons.stream()
-                                    .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
-                                
-                                if (!exists) {
-                                    Lesson l = new Lesson();
-                                    l.setTitle(lessonTitle);
-                                    l.setCompleted(false);
-                                    l.setCourse(course);
-                                    lessons.save(l);
-                                    count++;
-                                }
-                            }
-                        }
-                    }
-                }
-                System.out.println("Se agregaron " + count + " clases nuevas al curso de Data Science.");
-            } catch (Exception e) {
-                System.err.println("Error al leer el archivo de sílabo de Data Science: " + e.getMessage());
-            }
-        }
-    }
-
-    private void seedDataAnalyst(User user, CourseRepository courses, LessonRepository lessons) {
-        Course course = courses.findByUserEmail(user.getEmail()).stream()
-            .filter(c -> c.getCode().equalsIgnoreCase("DA-201") || c.getTitle().equalsIgnoreCase("Data Analyst"))
-            .findFirst()
-            .orElseGet(() -> {
-                Course c = new Course();
-                c.setTitle("Data Analyst");
-                c.setCode("DA-201");
-                c.setProfessor("Antigravity DA");
-                c.setUniversity("StudyHub Academy");
-                c.setPlatform("Local");
-                c.setColor("#ffa502");
-                c.setIcon("📊");
-                c.setUser(user);
-                c.setStatus(CourseStatus.NOT_STARTED);
-                return courses.save(c);
-            });
-
-        File file = new File("C:/Users/Harold/.gemini/antigravity/brain/02bc3140-0dc9-4d5b-9b45-0ce57d95ac02/silabo_dosificado.md");
-        if (file.exists()) {
-            System.out.println("Cargando sílabo de Data Analyst desde: " + file.getAbsolutePath());
-            try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
-                String line;
-                String currentModule = "Módulo 1";
-                int count = 0;
-                List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
-
-                while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    if (line.startsWith("# ") && (line.contains("MÓDULO") || line.contains("Módulo"))) {
-                        String clean = line.replace("#", "").replaceAll("[🟦🟩🟨🟧🟥🟪🔵🏆🟫]", "").trim();
-                        int colonIdx = clean.indexOf(":");
-                        if (colonIdx != -1) {
-                            currentModule = clean.substring(0, colonIdx).trim();
-                        } else {
-                            currentModule = clean;
-                        }
-                    }
-                    if (line.startsWith("|") && line.endsWith("|")) {
-                        String[] parts = line.split("\\|");
-                        if (parts.length >= 6) {
-                            String sessionNum = parts[1].trim();
-                            String topic = parts[2].trim();
-                            
-                            if (!sessionNum.equalsIgnoreCase("Sesión") && 
-                                !sessionNum.startsWith("---") && 
-                                !sessionNum.isEmpty() &&
-                                !topic.isEmpty() && 
-                                !topic.startsWith("---")) {
-                                
-                                try {
-                                    Integer.parseInt(sessionNum);
-                                    String lessonTitle = currentModule + " · Sesión " + sessionNum + ": " + topic;
+                                if (day.toLowerCase().contains("clase") && 
+                                    !day.equalsIgnoreCase("Clase") && 
+                                    !day.startsWith("---") && 
+                                    !topic.isEmpty() && 
+                                    !topic.startsWith("---")) {
+                                    
+                                    String lessonTitle = currentWeek + " · " + day + ": " + topic;
                                     boolean exists = existingLessons.stream()
                                         .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
                                     
@@ -443,87 +253,106 @@ class DevelopmentSeed {
                                         lessons.save(l);
                                         count++;
                                     }
-                                } catch (NumberFormatException ignored) {}
+                                }
                             }
                         }
                     }
+                    System.out.println("Se agregaron " + count + " clases nuevas al curso de Inglés.");
                 }
-                System.out.println("Se agregaron " + count + " clases nuevas al curso de Data Analyst.");
-            } catch (Exception e) {
-                System.err.println("Error al leer el archivo de sílabo de Data Analyst: " + e.getMessage());
+            } else {
+                System.err.println("No se encontró el archivo de sílabo de Inglés en los recursos.");
             }
+        } catch (Exception e) {
+            System.err.println("Error al leer el archivo de sílabo de Inglés: " + e.getMessage());
         }
     }
 
-    private void seedCloudDevOps(User user, CourseRepository courses, LessonRepository lessons) {
+    private void seedDataEngineer(User user, CourseRepository courses, LessonRepository lessons) {
         Course course = courses.findByUserEmail(user.getEmail()).stream()
-            .filter(c -> c.getCode().equalsIgnoreCase("CD-501") || c.getTitle().equalsIgnoreCase("Cloud & DevOps"))
+            .filter(c -> c.getCode().equalsIgnoreCase("DE-301") || c.getTitle().equalsIgnoreCase("Data Engineer"))
             .findFirst()
             .orElseGet(() -> {
                 Course c = new Course();
-                c.setTitle("Cloud & DevOps");
-                c.setCode("CD-501");
-                c.setProfessor("Antigravity Cloud");
+                c.setTitle("Data Engineer");
+                c.setCode("DE-301");
+                c.setProfessor("Antigravity DE");
                 c.setUniversity("StudyHub Academy");
                 c.setPlatform("Local");
-                c.setColor("#3742fa");
-                c.setIcon("☁️");
+                c.setColor("#ffa502");
+                c.setIcon("🛠️");
                 c.setUser(user);
                 c.setStatus(CourseStatus.NOT_STARTED);
                 return courses.save(c);
             });
 
-        File file = new File("C:/Users/Harold/.gemini/antigravity/brain/eabc4e13-2cc9-44bc-99eb-d0617acb9478/silabo_cloud_devops.md");
-        if (file.exists()) {
-            System.out.println("Cargando sílabo de Cloud & DevOps desde: " + file.getAbsolutePath());
-            try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
-                String line;
-                String currentPhase = "Fase 0";
-                int count = 0;
-                List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+        try (InputStream is = getClass().getResourceAsStream("/syllabi/data_engineering.md")) {
+            if (is != null) {
+                System.out.println("Cargando sílabo de Data Engineer desde recursos...");
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                    String line;
+                    String currentModule = "Módulo 0";
+                    String currentWeek = "";
+                    int count = 0;
+                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
 
-                while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    if (line.startsWith("## 📍 FASE") || line.startsWith("## FASE")) {
-                        String clean = line.replace("#", "").replace("📍", "").trim();
-                        int dashIdx = clean.indexOf("—");
-                        if (dashIdx != -1) {
-                            currentPhase = clean.substring(0, dashIdx).trim();
-                        } else {
-                            currentPhase = clean;
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.startsWith("## MÓDULO") || line.startsWith("## Módulo")) {
+                            String clean = line.replace("#", "").trim();
+                            int dashIdx = clean.indexOf("—");
+                            if (dashIdx != -1) {
+                                currentModule = clean.substring(0, dashIdx).trim();
+                            } else {
+                                currentModule = clean;
+                            }
+                            currentWeek = "";
                         }
-                    }
-                    if (line.startsWith("|") && line.endsWith("|")) {
-                        String[] parts = line.split("\\|");
-                        if (parts.length >= 3) {
-                            String week = parts[1].trim().replace("**", "");
-                            
-                            if ((week.startsWith("S") || week.startsWith("P") || week.matches("\\d+")) && 
-                                !week.equalsIgnoreCase("Semana") && 
-                                !week.equalsIgnoreCase("#") && 
-                                !week.startsWith("---") && 
-                                !week.isEmpty()) {
-                                
-                                String topic = "";
-                                if (parts.length >= 5) {
-                                    String module = parts[2].trim().replace("**", "");
-                                    String temas = parts[3].trim();
-                                    topic = module + ": " + temas;
+                        if (line.startsWith("### ")) {
+                            String sub = line.substring(4).trim();
+                            if (sub.toUpperCase().startsWith("SEMANA") || sub.toUpperCase().startsWith("TEMAS")) {
+                                int dashIdx = sub.indexOf("—");
+                                if (dashIdx != -1) {
+                                    currentWeek = sub.substring(0, dashIdx).trim();
                                 } else {
-                                    topic = parts[2].trim();
+                                    currentWeek = sub;
                                 }
-                                
-                                if (!topic.isEmpty() && !topic.startsWith("---")) {
-                                    String lessonTitle = currentPhase + " · " + week + " · " + topic;
+                            }
+                        }
+                        if (currentModule.equalsIgnoreCase("Módulo 0") && line.startsWith("- ")) {
+                            String topic = line.substring(2).trim();
+                            if (!topic.isEmpty()) {
+                                String lessonTitle = "Módulo 0 · " + topic;
+                                boolean exists = existingLessons.stream()
+                                    .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
+                                if (!exists) {
+                                    Lesson l = new Lesson();
+                                    l.setTitle(lessonTitle);
+                                    l.setCompleted(false);
+                                    l.setCourse(course);
+                                    lessons.save(l);
+                                    count++;
+                                }
+                            }
+                        }
+                        if (line.startsWith("|") && line.endsWith("|")) {
+                            String[] parts = line.split("\\|");
+                            if (parts.length >= 3) {
+                                String col1 = parts[1].trim();
+                                String col2 = parts[2].trim();
+                                if (!col1.equalsIgnoreCase("Tema") && 
+                                    !col1.startsWith("---") && 
+                                    !col1.isEmpty() && 
+                                    !col2.isEmpty() && 
+                                    !col2.startsWith("---")) {
                                     
-                                    if (lessonTitle.length() > 250) {
-                                        lessonTitle = lessonTitle.substring(0, 247) + "...";
+                                    String weekPrefix = currentWeek.isEmpty() ? "" : currentWeek + " · ";
+                                    String lessonTitle = currentModule + " · " + weekPrefix + col1 + ": " + col2;
+                                    if (lessonTitle.length() > 200) {
+                                        lessonTitle = lessonTitle.substring(0, 197) + "...";
                                     }
-                                    
-                                    String finalTitle = lessonTitle;
+                                    final String targetTitle = lessonTitle;
                                     boolean exists = existingLessons.stream()
-                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(finalTitle));
-                                    
+                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(targetTitle));
                                     if (!exists) {
                                         Lesson l = new Lesson();
                                         l.setTitle(lessonTitle);
@@ -536,27 +365,25 @@ class DevelopmentSeed {
                             }
                         }
                     }
+                    System.out.println("Se agregaron " + count + " clases nuevas al curso de Data Engineer.");
                 }
-                System.out.println("Se agregaron " + count + " clases nuevas al curso de Cloud & DevOps.");
-            } catch (Exception e) {
-                System.err.println("Error al leer el archivo de sílabo de Cloud & DevOps: " + e.getMessage());
+            } else {
+                System.err.println("No se encontró el archivo de sílabo de Data Engineer en los recursos.");
             }
+        } catch (Exception e) {
+            System.err.println("Error al leer el archivo de sílabo de Data Engineer: " + e.getMessage());
         }
     }
 
     private void seedRecoveredNotes(User user, CourseRepository courses, LessonRepository lessons, NoteRepository noteRepository) {
         System.out.println("Recuperando y sembrando apuntes previos del usuario...");
-        
-        // Find Java course
         Course javaCourse = courses.findByUserEmail(user.getEmail()).stream()
             .filter(c -> c.getTitle().equalsIgnoreCase("Java"))
             .findFirst()
             .orElse(null);
-            
         if (javaCourse == null) return;
-        
         List<Lesson> javaLessons = lessons.findByCourseId(javaCourse.getId());
-        
+
         // 1. Lunes Note
         javaLessons.stream()
             .filter(l -> l.getTitle().contains("¿Qué es un Backend?"))
