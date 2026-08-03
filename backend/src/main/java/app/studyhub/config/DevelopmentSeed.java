@@ -82,16 +82,16 @@ class DevelopmentSeed {
             for (int d = 0; d < 5; d++) { // Lunes a Viernes
                 LocalDate date = startDate.plusWeeks(w).plusDays(d);
 
-                // Data Engineer (Lunes a Viernes 08:30 - 10:30)
+                // Data Engineer (Lunes a Viernes 08:00 - 11:00)
                 createEvent(user, eventRepository, "Estudio: Data Engineer", 
                     "Linux, SQL, Python, orquestación, Spark o modelado de pipelines.", 
-                    date.atTime(8, 30), "#ffa502");
+                    date.atTime(8, 0), "#ffa502");
                 count++;
 
-                // Java Backend (Lunes a Viernes 11:00 - 13:00)
+                // Java Backend (Lunes a Viernes 11:30 - 14:30)
                 createEvent(user, eventRepository, "Estudio: Java Backend", 
                     "Microservicios con Spring Boot, seguridad REST y testing unitario.", 
-                    date.atTime(11, 0), "#7257e8");
+                    date.atTime(11, 30), "#7257e8");
                 count++;
 
                 // Inglés (Lunes a Viernes 18:30 - 20:00)
