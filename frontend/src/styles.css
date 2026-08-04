@@ -84,6 +84,8 @@ body {
   display: flex;
   min-height: 100vh;
   position: relative;
+  color: var(--text-main);
+  background-color: var(--bg-app);
   background-attachment: fixed;
   background-image: 
     radial-gradient(at 10% 10%, rgba(114, 87, 232, 0.06) 0px, transparent 50%),
