@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import {
   BookOpen, CalendarDays, CheckCircle2, ChevronRight, FileText, LayoutDashboard,
   MoreHorizontal, Plus, Search, Settings, Sparkles, Star, X, ArrowLeft, Trash2,
-  Edit, Save, LogOut, Bell, Check, Moon, Sun, Filter, Lock, User, Clock
+  Edit, Save, LogOut, Bell, Check, Moon, Sun, Filter, Lock, User, Clock,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import './styles.css';
 
@@ -1158,6 +1159,7 @@ function CourseDetail({
   const [scratchpadContent, setScratchpadContent] = useState('');
   const [lessonTitleEdit, setLessonTitleEdit] = useState('');
   const [scratchpadEditMode, setScratchpadEditMode] = useState(true);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   // Edit fields state
   const [editTitle, setEditTitle] = useState('');
@@ -1495,8 +1497,8 @@ function CourseDetail({
       </div>
 
       {activeLesson && lessonNote && (
-        <div className="overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '20px' }} onClick={() => { handleSaveLessonNote(); setActiveLesson(null); }}>
-          <div className="modal glass" style={{ width: showScratchpad ? 'min(700px, 60vw)' : 'min(1000px, 95vw)', height: '90vh', maxWidth: 'none', display: 'flex', flexDirection: 'column', transition: 'all 0.3s ease' }} onClick={e => e.stopPropagation()}>
+        <div className="overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: isMaximized ? '0' : '20px' }} onClick={() => { handleSaveLessonNote(); setActiveLesson(null); setIsMaximized(false); }}>
+          <div className="modal glass" style={{ width: isMaximized ? '100vw' : (showScratchpad ? 'min(700px, 60vw)' : 'min(1000px, 95vw)'), height: isMaximized ? '100vh' : '90vh', maxWidth: 'none', borderRadius: isMaximized ? '0' : '16px', display: 'flex', flexDirection: 'column', transition: 'all 0.3s ease' }} onClick={e => e.stopPropagation()}>
             <div className="modalhead" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '8px' }}>
               <div>
                 <span className="code-tag" style={{ background: `${course.color}22`, color: course.color, marginBottom: '4px' }}>{course.title}</span>
@@ -1532,7 +1534,10 @@ function CourseDetail({
                 })}>
                   <CheckCircle2 size={16} /> {activeLesson.completed ? 'Completada' : 'Marcar Completada'}
                 </button>
-                <button type="button" onClick={() => { handleSaveLessonNote(); setActiveLesson(null); }}><X size={20} /></button>
+                <button className="outline flex-row" onClick={() => setIsMaximized(!isMaximized)} title={isMaximized ? "Minimizar" : "Maximizar"}>
+                  {isMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                </button>
+                <button type="button" onClick={() => { handleSaveLessonNote(); setActiveLesson(null); setIsMaximized(false); }}><X size={20} /></button>
               </div>
             </div>
 
