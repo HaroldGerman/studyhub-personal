@@ -1184,6 +1184,43 @@ function CourseDetail({
   const [lessonTitleEdit, setLessonTitleEdit] = useState('');
   const [scratchpadEditMode, setScratchpadEditMode] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [editorWidthPercent, setEditorWidthPercent] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.addEventListener('mousemove', handleDividerMouseMove);
+    document.addEventListener('mouseup', handleDividerMouseUp);
+  };
+
+  const handleDividerMouseMove = (e: MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const newPercent = ((e.clientX - rect.left) / rect.width) * 100;
+    setEditorWidthPercent(Math.max(20, Math.min(80, newPercent)));
+  };
+
+  const handleDividerMouseUp = () => {
+    document.removeEventListener('mousemove', handleDividerMouseMove);
+    document.removeEventListener('mouseup', handleDividerMouseUp);
+  };
+
+  const handleDividerTouchStart = (e: React.TouchEvent) => {
+    document.addEventListener('touchmove', handleDividerTouchMove, { passive: false });
+    document.addEventListener('touchend', handleDividerTouchEnd);
+  };
+
+  const handleDividerTouchMove = (e: TouchEvent) => {
+    if (!containerRef.current || e.touches.length === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const newPercent = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+    setEditorWidthPercent(Math.max(20, Math.min(80, newPercent)));
+  };
+
+  const handleDividerTouchEnd = () => {
+    document.removeEventListener('touchmove', handleDividerTouchMove);
+    document.removeEventListener('touchend', handleDividerTouchEnd);
+  };
 
   // Edit fields state
   const [editTitle, setEditTitle] = useState('');
@@ -1595,9 +1632,9 @@ function CourseDetail({
                 </div>
               </div>
 
-              <div className="note-columns" style={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
+              <div className="note-columns" ref={containerRef} style={{ flexGrow: 1, display: 'flex', minHeight: 0, position: 'relative' }}>
                 {showEditor && (
-                  <div className="note-column-edit" style={{ width: '50%', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                  <div className="note-column-edit" style={{ width: `${editorWidthPercent}%`, display: 'flex', flexDirection: 'column' }}>
                     <div className="column-label">EDITOR MARKDOWN</div>
                     <textarea
                       value={noteBody}
@@ -1608,7 +1645,25 @@ function CourseDetail({
                   </div>
                 )}
 
-                <div className="note-column-preview" style={{ width: showEditor ? '50%' : '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                {showEditor && (
+                  <div
+                    className="notes-divider"
+                    onMouseDown={handleDividerMouseDown}
+                    onTouchStart={handleDividerTouchStart}
+                    style={{
+                      width: '6px',
+                      cursor: 'col-resize',
+                      background: 'var(--border-color)',
+                      transition: 'background 0.2s',
+                      userSelect: 'none',
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-color)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--border-color)'}
+                  />
+                )}
+
+                <div className="note-column-preview" style={{ width: showEditor ? `${100 - editorWidthPercent}%` : '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                   <div className="column-label">VISTA PREVIA</div>
                   <div className="markdown-body" style={{ padding: '12px', flexGrow: 1 }}>
                     {parseMarkdown(noteBody)}
