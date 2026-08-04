@@ -1222,6 +1222,40 @@ function CourseDetail({
     document.removeEventListener('touchend', handleDividerTouchEnd);
   };
 
+  const [scratchpadWidth, setScratchpadWidth] = useState(350);
+
+  const handleScratchpadDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.addEventListener('mousemove', handleScratchpadDividerMouseMove);
+    document.addEventListener('mouseup', handleScratchpadDividerMouseUp);
+  };
+
+  const handleScratchpadDividerMouseMove = (e: MouseEvent) => {
+    const newWidth = window.innerWidth - e.clientX - 30;
+    setScratchpadWidth(Math.max(250, Math.min(600, newWidth)));
+  };
+
+  const handleScratchpadDividerMouseUp = () => {
+    document.removeEventListener('mousemove', handleScratchpadDividerMouseMove);
+    document.removeEventListener('mouseup', handleScratchpadDividerMouseUp);
+  };
+
+  const handleScratchpadDividerTouchStart = (e: React.TouchEvent) => {
+    document.addEventListener('touchmove', handleScratchpadDividerTouchMove, { passive: false });
+    document.addEventListener('touchend', handleScratchpadDividerTouchEnd);
+  };
+
+  const handleScratchpadDividerTouchMove = (e: TouchEvent) => {
+    if (e.touches.length === 0) return;
+    const newWidth = window.innerWidth - e.touches[0].clientX - 30;
+    setScratchpadWidth(Math.max(250, Math.min(600, newWidth)));
+  };
+
+  const handleScratchpadDividerTouchEnd = () => {
+    document.removeEventListener('touchmove', handleScratchpadDividerTouchMove);
+    document.removeEventListener('touchend', handleScratchpadDividerTouchEnd);
+  };
+
   // Edit fields state
   const [editTitle, setEditTitle] = useState('');
   const [editCode, setEditCode] = useState('');
@@ -1647,20 +1681,12 @@ function CourseDetail({
 
                 {showEditor && (
                   <div
-                    className="notes-divider"
+                    className="notes-divider-container"
                     onMouseDown={handleDividerMouseDown}
                     onTouchStart={handleDividerTouchStart}
-                    style={{
-                      width: '6px',
-                      cursor: 'col-resize',
-                      background: 'var(--border-color)',
-                      transition: 'background 0.2s',
-                      userSelect: 'none',
-                      flexShrink: 0
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-color)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'var(--border-color)'}
-                  />
+                  >
+                    <div className="notes-divider-line" />
+                  </div>
                 )}
 
                 <div className="note-column-preview" style={{ width: showEditor ? `${100 - editorWidthPercent}%` : '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
@@ -1673,8 +1699,26 @@ function CourseDetail({
             </div>
           </div>
 
+          {showScratchpad && !isMaximized && (
+            <div
+              className="notes-divider-container"
+              onMouseDown={handleScratchpadDividerMouseDown}
+              onTouchStart={handleScratchpadDividerTouchStart}
+              style={{
+                height: '90vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 -10px',
+                zIndex: 11
+              }}
+            >
+              <div className="notes-divider-line" />
+            </div>
+          )}
+
           {showScratchpad && (
-            <div className="scratchpad-panel glass" style={{ width: '350px', height: '90vh', display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', animation: 'slideInRight 0.3s ease' }} onClick={e => e.stopPropagation()}>
+            <div className="scratchpad-panel glass" style={{ width: `${scratchpadWidth}px`, height: '90vh', display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', animation: 'slideInRight 0.3s ease' }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <b style={{ color: '#ffffff', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>📌 Apuntes Rápidos</b>
                 <button type="button" onClick={() => setShowScratchpad(false)} style={{ padding: '4px', minWidth: 'auto', background: 'transparent' }}><X size={16} /></button>
