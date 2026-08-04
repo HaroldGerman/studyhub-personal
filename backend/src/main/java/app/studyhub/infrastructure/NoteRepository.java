@@ -8,5 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface NoteRepository extends JpaRepository<Note,UUID>{
     List<Note> findByUserEmailOrderByLastModifiedDesc(String email);
-    Optional<Note> findByLessonIdAndUserEmail(UUID lessonId, String email);
+    List<Note> findByLessonIdAndUserEmail(UUID lessonId, String email);
 }

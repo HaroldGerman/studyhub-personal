@@ -375,6 +375,18 @@ class DevelopmentSeed {
         }
     }
 
+    private Note getOrCreateSeededNote(NoteRepository noteRepository, Lesson lesson, Course course, User user) {
+        List<Note> notes = noteRepository.findByLessonIdAndUserEmail(lesson.getId(), user.getEmail());
+        if (!notes.isEmpty()) {
+            return notes.get(0);
+        }
+        Note n = new Note();
+        n.setLessonId(lesson.getId());
+        n.setCourseId(course.getId());
+        n.setUser(user);
+        return n;
+    }
+
     private void seedRecoveredNotes(User user, CourseRepository courses, LessonRepository lessons, NoteRepository noteRepository) {
         System.out.println("Recuperando y sembrando apuntes previos del usuario...");
         Course javaCourse = courses.findByUserEmail(user.getEmail()).stream()
@@ -389,14 +401,7 @@ class DevelopmentSeed {
             .filter(l -> l.getTitle().contains("¿Qué es un Backend?"))
             .findFirst()
             .ifPresent(lesson -> {
-                Note note = noteRepository.findByLessonIdAndUserEmail(lesson.getId(), user.getEmail())
-                    .orElseGet(() -> {
-                        Note n = new Note();
-                        n.setLessonId(lesson.getId());
-                        n.setCourseId(javaCourse.getId());
-                        n.setUser(user);
-                        return n;
-                    });
+                Note note = getOrCreateSeededNote(noteRepository, lesson, javaCourse, user);
                 if (note.getBody() == null || note.getBody().trim().isEmpty()) {
                     note.setTitle("Apuntes: Semana 1 · Lunes: ¿Qué es un Backend? ¿Qué hace un Java Dev?");
                     note.setBody(
@@ -431,14 +436,7 @@ class DevelopmentSeed {
             .filter(l -> l.getTitle().contains("Cómo trabaja con Frontend"))
             .findFirst()
             .ifPresent(lesson -> {
-                Note note = noteRepository.findByLessonIdAndUserEmail(lesson.getId(), user.getEmail())
-                    .orElseGet(() -> {
-                        Note n = new Note();
-                        n.setLessonId(lesson.getId());
-                        n.setCourseId(javaCourse.getId());
-                        n.setUser(user);
-                        return n;
-                    });
+                Note note = getOrCreateSeededNote(noteRepository, lesson, javaCourse, user);
                 if (note.getBody() == null || note.getBody().trim().isEmpty()) {
                     note.setTitle("Apuntes: Semana 1 · Martes: Cómo trabaja con Frontend, DevOps, QA, PM");
                     note.setBody(
@@ -461,14 +459,7 @@ class DevelopmentSeed {
             .filter(l -> l.getTitle().contains("¿Cómo es un día real"))
             .findFirst()
             .ifPresent(lesson -> {
-                Note note = noteRepository.findByLessonIdAndUserEmail(lesson.getId(), user.getEmail())
-                    .orElseGet(() -> {
-                        Note n = new Note();
-                        n.setLessonId(lesson.getId());
-                        n.setCourseId(javaCourse.getId());
-                        n.setUser(user);
-                        return n;
-                    });
+                Note note = getOrCreateSeededNote(noteRepository, lesson, javaCourse, user);
                 if (note.getBody() == null || note.getBody().trim().isEmpty()) {
                     note.setTitle("Apuntes: Semana 1 · Miércoles: ¿Cómo es un día real de trabajo en empresa?");
                     note.setBody(
@@ -491,14 +482,7 @@ class DevelopmentSeed {
             .filter(l -> l.getTitle().contains("Ecosistema Java"))
             .findFirst()
             .ifPresent(lesson -> {
-                Note note = noteRepository.findByLessonIdAndUserEmail(lesson.getId(), user.getEmail())
-                    .orElseGet(() -> {
-                        Note n = new Note();
-                        n.setLessonId(lesson.getId());
-                        n.setCourseId(javaCourse.getId());
-                        n.setUser(user);
-                        return n;
-                    });
+                Note note = getOrCreateSeededNote(noteRepository, lesson, javaCourse, user);
                 if (note.getBody() == null || note.getBody().trim().isEmpty()) {
                     note.setTitle("Apuntes: Semana 1 · Jueves: Ecosistema Java: JDK, JRE, JVM, bytecode");
                     note.setBody(
@@ -519,14 +503,7 @@ class DevelopmentSeed {
             .filter(l -> l.getTitle().contains("Instalación y configuración") || l.getTitle().contains("Instalacion y configuracion"))
             .findFirst()
             .ifPresent(lesson -> {
-                Note note = noteRepository.findByLessonIdAndUserEmail(lesson.getId(), user.getEmail())
-                    .orElseGet(() -> {
-                        Note n = new Note();
-                        n.setLessonId(lesson.getId());
-                        n.setCourseId(javaCourse.getId());
-                        n.setUser(user);
-                        return n;
-                    });
+                Note note = getOrCreateSeededNote(noteRepository, lesson, javaCourse, user);
                 if (note.getBody() == null || note.getBody().trim().isEmpty()) {
                     note.setTitle("Apuntes: Semana 1 · Viernes: Buenas Practicas y errores comunes");
                     note.setBody(

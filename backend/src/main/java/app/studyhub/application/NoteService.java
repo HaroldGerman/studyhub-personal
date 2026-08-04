@@ -33,23 +33,24 @@ public class NoteService {
     }
 
     public Note getByLesson(UUID lessonId, String email) {
-        return repository.findByLessonIdAndUserEmail(lessonId, email)
-            .orElseGet(() -> {
-                User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
-                
-                Lesson lesson = lessonRepository.findById(lessonId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lección no encontrada"));
-                
-                Note note = new Note();
-                note.setTitle("Apuntes: " + lesson.getTitle());
-                note.setBody("");
-                note.setLessonId(lessonId);
-                note.setCourseId(lesson.getCourse().getId());
-                note.setUser(user);
-                note.setLastModified(LocalDateTime.now());
-                return repository.save(note);
-            });
+        List<Note> notes = repository.findByLessonIdAndUserEmail(lessonId, email);
+        if (!notes.isEmpty()) {
+            return notes.get(0);
+        }
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        
+        Lesson lesson = lessonRepository.findById(lessonId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lección no encontrada"));
+        
+        Note note = new Note();
+        note.setTitle("Apuntes: " + lesson.getTitle());
+        note.setBody("");
+        note.setLessonId(lessonId);
+        note.setCourseId(lesson.getCourse().getId());
+        note.setUser(user);
+        note.setLastModified(LocalDateTime.now());
+        return repository.save(note);
     }
 
     public Note create(NoteRequest r, String email) {
