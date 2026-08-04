@@ -748,6 +748,30 @@ function App() {
         </div>
       </aside>
 
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="mobile-nav-bar">
+        <button className={`mobile-nav-item ${page === 'dashboard' ? 'active' : ''}`} onClick={() => setPage('dashboard')}>
+          <LayoutDashboard size={20} />
+          <span>Inicio</span>
+        </button>
+        <button className={`mobile-nav-item ${page === 'courses' || page === 'course-detail' ? 'active' : ''}`} onClick={() => setPage('courses')}>
+          <BookOpen size={20} />
+          <span>Cursos</span>
+        </button>
+        <button className={`mobile-nav-item ${page === 'notes' ? 'active' : ''}`} onClick={() => setPage('notes')}>
+          <FileText size={20} />
+          <span>Notas</span>
+        </button>
+        <button className={`mobile-nav-item ${page === 'calendar' ? 'active' : ''}`} onClick={() => setPage('calendar')}>
+          <CalendarDays size={20} />
+          <span>Agenda</span>
+        </button>
+        <button className={`mobile-nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => setPage('settings')}>
+          <Settings size={20} />
+          <span>Ajustes</span>
+        </button>
+      </div>
+
       <main>
         <header className="glass">
           <div className="mobilebrand">studyhub</div>
