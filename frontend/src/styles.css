@@ -14,8 +14,14 @@
   
   --danger-color: #e66c5a;
   --danger-rgb: 230, 108, 90;
+}
 
-  /* Light Theme Variables */
+/* ==========================================================================
+   THEME MODULES
+   ========================================================================== */
+
+/* ☀️ LIGHT THEME MODULE */
+.app {
   --bg-app: #f4f3f8;
   --bg-sidebar: rgba(255, 255, 255, 0.7);
   --bg-card: rgba(255, 255, 255, 0.65);
@@ -37,10 +43,13 @@
   --glass-bg: rgba(255, 255, 255, 0.45);
   --glass-border: rgba(255, 255, 255, 0.4);
   --glass-blur: blur(16px);
+  
+  color: var(--text-main);
+  background-color: var(--bg-app);
 }
 
+/* 🌙 DARK THEME MODULE */
 .app.dark {
-  /* Dark Theme Variables */
   --bg-app: #0c0a12;
   --bg-sidebar: rgba(19, 16, 29, 0.75);
   --bg-card: rgba(24, 21, 38, 0.65);
@@ -62,6 +71,9 @@
   --glass-bg: rgba(20, 17, 31, 0.55);
   --glass-border: rgba(255, 255, 255, 0.05);
   --glass-blur: blur(16px);
+  
+  color: var(--text-main);
+  background-color: var(--bg-app);
 }
 
 /* Base resets & layouts */

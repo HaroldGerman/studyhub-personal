@@ -537,6 +537,11 @@ function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('sh-dark') === 'true');
   const [activityLog, setActivityLog] = useState<{ id: string; text: string; time: string; icon: string }[]>([]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+    document.body.classList.toggle('dark', dark);
+  }, [dark]);
+
   // Fetch initial profile and items on login/load
   useEffect(() => {
     if (token) {
@@ -1592,8 +1597,8 @@ function CourseDetail({
       </div>
 
       {activeLesson && lessonNote && (
-        <div className="overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: isMaximized ? '0' : '20px' }} onClick={() => { handleSaveLessonNote(); setActiveLesson(null); setIsMaximized(false); }}>
-          <div className="modal glass" style={{ width: isMaximized ? '100vw' : (showScratchpad ? 'min(700px, 60vw)' : 'min(1000px, 95vw)'), height: isMaximized ? '100vh' : '90vh', maxWidth: 'none', borderRadius: isMaximized ? '0' : '16px', display: 'flex', flexDirection: 'column', transition: 'all 0.3s ease' }} onClick={e => e.stopPropagation()}>
+        <div className="overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMaximized ? '0' : '20px', padding: isMaximized ? '0' : '20px' }} onClick={() => { handleSaveLessonNote(); setActiveLesson(null); setIsMaximized(false); }}>
+          <div className="modal glass" style={{ width: isMaximized ? (showScratchpad ? `calc(100vw - ${scratchpadWidth}px)` : '100vw') : (showScratchpad ? 'min(700px, 60vw)' : 'min(1000px, 95vw)'), height: isMaximized ? '100vh' : '90vh', maxWidth: 'none', borderRadius: isMaximized ? '0' : '16px', display: 'flex', flexDirection: 'column', transition: 'all 0.3s ease' }} onClick={e => e.stopPropagation()}>
             <div className="modalhead" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '8px' }}>
               <div>
                 <span className="code-tag" style={{ background: `${course.color}22`, color: course.color, marginBottom: '4px' }}>{course.title}</span>
@@ -1699,13 +1704,13 @@ function CourseDetail({
             </div>
           </div>
 
-          {showScratchpad && !isMaximized && (
+          {showScratchpad && (
             <div
               className="notes-divider-container"
               onMouseDown={handleScratchpadDividerMouseDown}
               onTouchStart={handleScratchpadDividerTouchStart}
               style={{
-                height: '90vh',
+                height: isMaximized ? '100vh' : '90vh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1718,7 +1723,7 @@ function CourseDetail({
           )}
 
           {showScratchpad && (
-            <div className="scratchpad-panel glass" style={{ width: `${scratchpadWidth}px`, height: '90vh', display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', animation: 'slideInRight 0.3s ease' }} onClick={e => e.stopPropagation()}>
+            <div className="scratchpad-panel glass" style={{ width: `${scratchpadWidth}px`, height: isMaximized ? '100vh' : '90vh', display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: isMaximized ? '0' : '12px', border: '1px solid var(--border-color)', animation: 'slideInRight 0.3s ease' }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <b style={{ color: '#ffffff', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>📌 Apuntes Rápidos</b>
                 <button type="button" onClick={() => setShowScratchpad(false)} style={{ padding: '4px', minWidth: 'auto', background: 'transparent' }}><X size={16} /></button>
