@@ -58,7 +58,7 @@ class DevelopmentSeed {
                           && !c.getTitle().equalsIgnoreCase("Data Engineer"))
                 .forEach(c -> {
                     System.out.println("Eliminando curso no deseado: " + c.getTitle());
-                    List<Lesson> cLessons = lessons.findByCourseId(c.getId());
+                    List<Lesson> cLessons = lessons.findByCourseIdOrderByCreatedAtAsc(c.getId());
                     lessons.deleteAll(cLessons);
                     courses.delete(c);
                 });
@@ -172,7 +172,7 @@ class DevelopmentSeed {
                     String line;
                     String currentWeek = "Semana 1";
                     int count = 0;
-                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+                    List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -249,7 +249,7 @@ class DevelopmentSeed {
                     String line;
                     String currentWeek = "Semana 1";
                     int count = 0;
-                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+                    List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -326,7 +326,7 @@ class DevelopmentSeed {
                     String currentModule = "Módulo 0";
                     String currentWeek = "";
                     int count = 0;
-                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+                    List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -427,7 +427,7 @@ class DevelopmentSeed {
             .findFirst()
             .orElse(null);
         if (javaCourse == null) return;
-        List<Lesson> javaLessons = lessons.findByCourseId(javaCourse.getId());
+        List<Lesson> javaLessons = lessons.findByCourseIdOrderByCreatedAtAsc(javaCourse.getId());
 
         // 1. Lunes Note
         javaLessons.stream()
@@ -586,7 +586,7 @@ class DevelopmentSeed {
                     String currentModule = "Módulo 1";
                     String currentWeek = "Semana 1";
                     int count = 0;
-                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+                    List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -662,7 +662,7 @@ class DevelopmentSeed {
                     String line;
                     String currentWeek = "Semana 1";
                     int count = 0;
-                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+                    List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();

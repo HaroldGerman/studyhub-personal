@@ -19,7 +19,7 @@ public class Lesson {
     @JoinColumn(name="course_id")
     private Course course;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at")
     private java.time.LocalDateTime createdAt = java.time.LocalDateTime.now();
 
     public UUID getId() { return id; }

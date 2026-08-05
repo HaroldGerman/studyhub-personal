@@ -64,14 +64,14 @@ public class CourseService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acceso no autorizado a este curso");
         }
         // Remove associated lessons first (cascade delete)
-        List<Lesson> lessons = lessonRepository.findByCourseId(c.getId());
+        List<Lesson> lessons = lessonRepository.findByCourseIdOrderByCreatedAtAsc(c.getId());
         lessonRepository.deleteAll(lessons);
         
         repository.delete(c);
     }
 
     public CourseResponse toResponse(Course c) {
-        List<Lesson> lessons = lessonRepository.findByCourseId(c.getId());
+        List<Lesson> lessons = lessonRepository.findByCourseIdOrderByCreatedAtAsc(c.getId());
         int total = lessons.size();
         int completed = (int) lessons.stream().filter(Lesson::isCompleted).count();
         int progress = total > 0 ? (completed * 100) / total : 0;

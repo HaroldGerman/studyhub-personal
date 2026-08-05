@@ -30,7 +30,7 @@ public class LessonService {
         if (!course.getUser().getEmail().equalsIgnoreCase(email)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acceso no autorizado a este curso");
         }
-        return repository.findByCourseId(courseId);
+        return repository.findByCourseIdOrderByCreatedAtAsc(courseId);
     }
 
     public Lesson create(UUID courseId, LessonRequest r, String email) {
@@ -91,7 +91,7 @@ public class LessonService {
     }
 
     private void updateCourseStatus(Course course) {
-        List<Lesson> lessons = repository.findByCourseId(course.getId());
+        List<Lesson> lessons = repository.findByCourseIdOrderByCreatedAtAsc(course.getId());
         if (lessons.isEmpty()) {
             course.setStatus(CourseStatus.NOT_STARTED);
         } else {
