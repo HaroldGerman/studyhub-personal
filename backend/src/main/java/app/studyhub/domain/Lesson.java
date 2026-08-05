@@ -19,6 +19,9 @@ public class Lesson {
     @JoinColumn(name="course_id")
     private Course course;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private java.time.LocalDateTime createdAt = java.time.LocalDateTime.now();
+
     public UUID getId() { return id; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -26,4 +29,6 @@ public class Lesson {
     public void setCompleted(boolean completed) { this.completed = completed; }
     public Course getCourse() { return course; }
     public void setCourse(Course course) { this.course = course; }
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

@@ -552,6 +552,17 @@ function App() {
     document.body.classList.toggle('dark', dark);
   }, [dark]);
 
+  useEffect(() => {
+    if (modalOpen || searchOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [modalOpen, searchOpen]);
+
   // Fetch initial profile and items on login/load
   useEffect(() => {
     if (token) {
@@ -1291,6 +1302,17 @@ function CourseDetail({
     loadCourseDetails();
   }, [courseId]);
 
+  useEffect(() => {
+    if (activeLesson) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [activeLesson]);
+
   const loadCourseDetails = async () => {
     try {
       setLoading(true);
@@ -1692,6 +1714,7 @@ function CourseDetail({
                   <div className="note-column-edit" style={{ width: `${editorWidthPercent}%`, display: 'flex', flexDirection: 'column' }}>
                     <div className="column-label">EDITOR MARKDOWN</div>
                     <textarea
+                      autoFocus
                       value={noteBody}
                       onChange={e => setNoteBody(e.target.value)}
                       placeholder="Escribe tus resúmenes de clase usando Markdown..."
@@ -1747,6 +1770,7 @@ function CourseDetail({
 
               {scratchpadEditMode ? (
                 <textarea
+                  autoFocus
                   value={scratchpadContent}
                   onChange={e => handleSaveScratchpad(e.target.value)}
                   placeholder="Escribe aquí tus notas rápidas en Markdown..."
@@ -2006,6 +2030,17 @@ function Calendar({
   const [schedCourse, setSchedCourse] = useState('Data Engineer');
   const [schedColor, setSchedColor] = useState('#ffa502');
   const [schedModalOpen, setSchedModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (modalOpen || schedModalOpen || selectedDay !== null) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [modalOpen, schedModalOpen, selectedDay]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -2652,6 +2687,7 @@ function Calendar({
               <div>
                 <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600 }}>Día de la Semana</label>
                 <select 
+                  autoFocus
                   value={schedDay} 
                   onChange={e => setSchedDay(e.target.value)}
                   style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '13px' }}
@@ -2760,7 +2796,7 @@ function Calendar({
 
             <label>
               Título del evento
-              <input required value={eventTitle} onChange={e => setEventTitle(e.target.value)} placeholder="Ej. Repaso General de Patrones" />
+              <input autoFocus required value={eventTitle} onChange={e => setEventTitle(e.target.value)} placeholder="Ej. Repaso General de Patrones" />
             </label>
 
             <label>
