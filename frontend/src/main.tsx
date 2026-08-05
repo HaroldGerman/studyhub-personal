@@ -1962,6 +1962,17 @@ function Calendar({
   const [eventColor, setEventColor] = useState('#7257e8');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
+  // States for modifying the schedule (editing and adding)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editTime, setEditTime] = useState('10:00');
+  const [editDesc, setEditDesc] = useState('');
+  const [editColor, setEditColor] = useState('#7257e8');
+
+  const [newBlockTime, setNewBlockTime] = useState('08:00');
+  const [newBlockCourse, setNewBlockCourse] = useState('Estudio: Data Engineer');
+  const [newBlockColor, setNewBlockColor] = useState('#ffa502');
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -2004,17 +2015,103 @@ function Calendar({
     const startStr = startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
     
     const titleLower = e.title.toLowerCase();
+    let durationMinutes = 60; // default 1 hour
     if (titleLower.includes("data engineer")) {
-      return `${startStr} - 10:30`;
+      durationMinutes = 180; // 3 hours
     } else if (titleLower.includes("java backend") || titleLower.includes("java")) {
-      return `${startStr} - 13:00`;
+      durationMinutes = 180; // 3 hours
+    } else if (titleLower.includes("data analyst") || titleLower.includes("analyst")) {
+      durationMinutes = 120; // 2 hours
     } else if (titleLower.includes("inglés") || titleLower.includes("ingles")) {
-      return `${startStr} - 20:00`;
+      durationMinutes = 90; // 1.5 hours
     }
     
-    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
     const endStr = endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
     return `${startStr} - ${endStr}`;
+  };
+
+  const handleUpdateEvent = async (id: string, originalDateTime: string) => {
+    if (!editTitle.trim()) return;
+    try {
+      const datePart = originalDateTime.split('T')[0];
+      const dateTime = `${datePart}T${editTime}:00`;
+      
+      await apiFetch(`/api/events/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDesc,
+          dateTime,
+          color: editColor
+        })
+      });
+      setEditingEventId(null);
+      refreshEvents();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleNewBlockCourseChange = (val: string) => {
+    setNewBlockCourse(val);
+    if (val === 'Estudio: Data Engineer') {
+      setNewBlockColor('#ffa502');
+    } else if (val === 'Estudio: Java Backend') {
+      setNewBlockColor('#7257e8');
+    } else if (val === 'Estudio: Data Analyst') {
+      setNewBlockColor('#3f80ea');
+    } else if (val === 'Estudio: Inglés') {
+      setNewBlockColor('#ff4757');
+    } else {
+      setNewBlockColor('#6c757d');
+    }
+  };
+
+  const handleAddBlockToDay = async () => {
+    if (!newBlockCourse) return;
+    try {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const dateStr = `${year}-${pad(month + 1)}-${pad(selectedDay!)}`;
+      const dateTime = `${dateStr}T${newBlockTime}:00`;
+      
+      let description = '';
+      let title = newBlockCourse;
+      if (newBlockCourse === 'custom') {
+        // If it's a custom block but not entered, default to "Estudio Personalizado"
+        title = "Estudio: Personalizado";
+      }
+      
+      if (title.includes("Data Engineer")) {
+        description = "Linux, SQL, Python, orquestación, Spark o modelado de pipelines.";
+      } else if (title.includes("Java")) {
+        description = "Microservicios con Spring Boot, seguridad REST y testing unitario.";
+      } else if (title.includes("Data Analyst")) {
+        description = "Análisis exploratorio, tableros interactivos, consultas SQL complejas o dashboards.";
+      } else if (title.includes("Inglés")) {
+        description = "Conversación, vocabulario técnico y listening activo.";
+      }
+      
+      await apiFetch('/api/events', {
+        method: 'POST',
+        body: JSON.stringify({
+          title,
+          description,
+          dateTime,
+          color: newBlockColor
+        })
+      });
+      
+      // Reset custom values if added
+      if (newBlockCourse === 'custom') {
+        setNewBlockCourse('Estudio: Data Engineer');
+        setNewBlockColor('#ffa502');
+      }
+      
+      refreshEvents();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const handleAddEventSubmit = async (e: FormEvent) => {
@@ -2130,48 +2227,167 @@ function Calendar({
               <button type="button" onClick={() => setSelectedDay(null)}><X size={20} /></button>
             </div>
 
-            <div className="day-events-list">
+            <div className="day-events-list" style={{ maxHeight: '280px', overflowY: 'auto', marginBottom: '16px', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {getEventsForDay(selectedDay).length === 0 ? (
                 <p className="muted" style={{ textAlign: 'center', padding: '24px 0' }}>No hay eventos programados para este día.</p>
               ) : (
                 getEventsForDay(selectedDay)
                   .sort((a, b) => a.dateTime.localeCompare(b.dateTime))
                   .map(e => {
+                    const isEditing = editingEventId === e.id;
                     const timeRange = getEventTimeRange(e);
+                    const eventHour = new Date(e.dateTime).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    
                     return (
-                      <div key={e.id} className="day-event-item" style={{ borderLeft: `4px solid ${e.color}` }}>
-                        <div className="day-event-details">
-                          <div className="day-event-header">
-                            <span className="day-event-time" style={{ background: e.color, color: '#ffffff' }}>{timeRange}</span>
-                            <b className="day-event-title">{e.title}</b>
+                      <div key={e.id} className="day-event-item" style={{ borderLeft: `4px solid ${isEditing ? editColor : e.color}`, padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid var(--border-color)', borderLeftWidth: '4px' }}>
+                        {isEditing ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <input 
+                                type="time" 
+                                value={editTime} 
+                                onChange={ev => setEditTime(ev.target.value)} 
+                                style={{ width: '90px', padding: '4px 8px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '12px' }} 
+                              />
+                              <input 
+                                type="text" 
+                                value={editTitle} 
+                                onChange={ev => setEditTitle(ev.target.value)} 
+                                placeholder="Título del evento"
+                                style={{ flexGrow: 1, padding: '4px 8px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '12px' }} 
+                              />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <input 
+                                type="text" 
+                                value={editDesc} 
+                                onChange={ev => setEditDesc(ev.target.value)} 
+                                placeholder="Descripción (opcional)"
+                                style={{ flexGrow: 1, padding: '4px 8px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '12px' }} 
+                              />
+                              <input 
+                                type="color" 
+                                value={editColor} 
+                                onChange={ev => setEditColor(ev.target.value)} 
+                                style={{ width: '32px', height: '28px', border: 'none', padding: 0, cursor: 'pointer', background: 'transparent' }} 
+                              />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                              <button 
+                                type="button" 
+                                className="primary" 
+                                style={{ padding: '3px 8px', fontSize: '11px', minWidth: 'auto' }} 
+                                onClick={() => handleUpdateEvent(e.id, e.dateTime)}
+                              >
+                                Guardar
+                              </button>
+                              <button 
+                                type="button" 
+                                style={{ padding: '3px 8px', fontSize: '11px', minWidth: 'auto', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }} 
+                                onClick={() => setEditingEventId(null)}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
                           </div>
-                          {e.description && <p className="day-event-desc">{e.description}</p>}
-                        </div>
-                        <button className="delete-lesson-btn" style={{ padding: '6px', minWidth: 'auto', background: 'transparent' }} onClick={ev => { ev.stopPropagation(); handleDeleteEvent(e.id, ev).then(() => {
-                          // Close modal if no more events
-                          if (getEventsForDay(selectedDay).length <= 1) {
-                            setSelectedDay(null);
-                          }
-                        }); }}>
-                          <Trash2 size={16} />
-                        </button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+                            <div className="day-event-details" style={{ flexGrow: 1 }}>
+                              <div className="day-event-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span className="day-event-time" style={{ background: e.color, color: '#ffffff', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>{timeRange}</span>
+                                <b className="day-event-title" style={{ fontSize: '13px' }}>{e.title}</b>
+                              </div>
+                              {e.description && <p className="day-event-desc" style={{ fontSize: '12px', margin: '4px 0 0 0', opacity: 0.8 }}>{e.description}</p>}
+                            </div>
+                            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                              <button 
+                                type="button"
+                                style={{ padding: '4px', minWidth: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} 
+                                onClick={() => {
+                                  setEditingEventId(e.id);
+                                  setEditTitle(e.title);
+                                  setEditTime(eventHour);
+                                  setEditDesc(e.description || '');
+                                  setEditColor(e.color || '#7257e8');
+                                }}
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button 
+                                type="button"
+                                style={{ padding: '4px', minWidth: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger-color)' }} 
+                                onClick={ev => { 
+                                  ev.stopPropagation(); 
+                                  handleDeleteEvent(e.id, ev).then(() => {
+                                    if (getEventsForDay(selectedDay!).length <= 1) {
+                                      setSelectedDay(null);
+                                    }
+                                  }); 
+                                }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })
               )}
             </div>
 
-            <div className="modalactions" style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
-              <button className="primary flex-row" onClick={() => {
-                setSelectedDay(null);
-                const monthStr = String(month + 1).padStart(2, '0');
-                const dayStr = String(selectedDay).padStart(2, '0');
-                setEventDate(`${year}-${monthStr}-${dayStr}`);
-                setModalOpen(true);
-              }}>
-                <Plus size={16} /> Agregar evento
+            {/* Quick Add Form on Selected Day */}
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <b style={{ fontSize: '12px', color: 'var(--text-muted)' }}>➕ Agregar Bloque al Día</b>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input 
+                  type="time" 
+                  value={newBlockTime} 
+                  onChange={ev => setNewBlockTime(ev.target.value)} 
+                  style={{ width: '85px', padding: '5px 8px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '12px' }} 
+                />
+                <select 
+                  value={newBlockCourse} 
+                  onChange={ev => handleNewBlockCourseChange(ev.target.value)}
+                  style={{ flexGrow: 1, padding: '5px 8px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '12px' }}
+                >
+                  <option value="Estudio: Data Engineer">Data Engineer (Mañana)</option>
+                  <option value="Estudio: Java Backend">Java Backend (Mediodía)</option>
+                  <option value="Estudio: Data Analyst">Data Analyst (Tarde)</option>
+                  <option value="Estudio: Inglés">Inglés (Noche)</option>
+                  <option value="custom">Otro bloque (Personalizado)...</option>
+                </select>
+              </div>
+
+              {newBlockCourse === 'custom' && (
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Nombre del bloque" 
+                    onChange={ev => setNewBlockCourse(ev.target.value)}
+                    style={{ flexGrow: 1, padding: '5px 8px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '12px' }} 
+                  />
+                  <input 
+                    type="color" 
+                    value={newBlockColor} 
+                    onChange={ev => setNewBlockColor(ev.target.value)} 
+                    style={{ width: '32px', height: '28px', border: 'none', padding: 0, cursor: 'pointer', background: 'transparent' }} 
+                  />
+                </div>
+              )}
+
+              <button 
+                type="button" 
+                className="primary" 
+                style={{ padding: '6px 12px', fontSize: '12px', width: '100%' }}
+                onClick={handleAddBlockToDay}
+              >
+                Agregar Bloque
               </button>
-              <button type="button" className="outline" onClick={() => setSelectedDay(null)}>Cerrar</button>
+            </div>
+
+            <div className="modalactions" style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button type="button" className="outline" style={{ padding: '6px 12px', fontSize: '12px', minWidth: '80px' }} onClick={() => { setSelectedDay(null); setEditingEventId(null); }}>Cerrar</button>
             </div>
           </div>
         </div>

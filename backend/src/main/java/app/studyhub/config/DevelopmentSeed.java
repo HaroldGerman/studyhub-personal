@@ -48,6 +48,7 @@ class DevelopmentSeed {
             courses.findByUserEmail(user.getEmail()).stream()
                 .filter(c -> !c.getTitle().equalsIgnoreCase("Java") 
                           && !c.getTitle().equalsIgnoreCase("Inglés") 
+                          && !c.getTitle().equalsIgnoreCase("Data Analyst")
                           && !c.getTitle().equalsIgnoreCase("Data Engineer"))
                 .forEach(c -> {
                     System.out.println("Eliminando curso no deseado: " + c.getTitle());
@@ -60,6 +61,7 @@ class DevelopmentSeed {
             seedJava(user, courses, lessons);
             seedEnglish(user, courses, lessons);
             seedDataEngineer(user, courses, lessons);
+            seedDataAnalyst(user, courses, lessons);
 
             // 4. Seed Recovered Notes (from lost H2 memory state)
             seedRecoveredNotes(user, courses, lessons, noteRepository);
@@ -92,6 +94,12 @@ class DevelopmentSeed {
                 createEvent(user, eventRepository, "Estudio: Java Backend", 
                     "Microservicios con Spring Boot, seguridad REST y testing unitario.", 
                     date.atTime(11, 30), "#7257e8");
+                count++;
+
+                // Data Analyst (Lunes a Viernes 15:00 - 17:00)
+                createEvent(user, eventRepository, "Estudio: Data Analyst", 
+                    "Análisis exploratorio, tableros interactivos, consultas SQL complejas o dashboards.", 
+                    date.atTime(15, 0), "#3f80ea");
                 count++;
 
                 // Inglés (Lunes a Viernes 18:30 - 20:00)
@@ -525,5 +533,82 @@ class DevelopmentSeed {
                     System.out.println("Apunte de Viernes recuperado y sembrado.");
                 }
             });
+    }
+
+    private void seedDataAnalyst(User user, CourseRepository courses, LessonRepository lessons) {
+        Course course = courses.findByUserEmail(user.getEmail()).stream()
+            .filter(c -> c.getCode().equalsIgnoreCase("DA-201") || c.getTitle().equalsIgnoreCase("Data Analyst"))
+            .findFirst()
+            .orElseGet(() -> {
+                Course c = new Course();
+                c.setTitle("Data Analyst");
+                c.setCode("DA-201");
+                c.setProfessor("Antigravity DA");
+                c.setUniversity("StudyHub Academy");
+                c.setPlatform("Local");
+                c.setColor("#3f80ea");
+                c.setIcon("📊");
+                c.setUser(user);
+                c.setStatus(CourseStatus.NOT_STARTED);
+                return courses.save(c);
+            });
+
+        try (InputStream is = getClass().getResourceAsStream("/syllabi/data_analyst.md")) {
+            if (is != null) {
+                System.out.println("Cargando sílabo de Data Analyst desde recursos...");
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                    String line;
+                    String currentModule = "Módulo 1";
+                    String currentWeek = "Semana 1";
+                    int count = 0;
+                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.startsWith("# ") && (line.contains("MÓDULO") || line.contains("Módulo"))) {
+                            String clean = line.replace("#", "").replaceAll("[🟦🟩🟨🟧🟥🟪🔵🏆🟫]", "").trim();
+                            int colonIdx = clean.indexOf(":");
+                            if (colonIdx != -1) {
+                                currentModule = clean.substring(0, colonIdx).trim();
+                            } else {
+                                currentModule = clean;
+                            }
+                        }
+                        if (line.startsWith("### ")) {
+                            currentWeek = line.substring(4).trim();
+                        }
+                        if (line.startsWith("|") && line.endsWith("|")) {
+                            String[] parts = line.split("\\|");
+                            if (parts.length >= 6) {
+                                String sesion = parts[1].trim();
+                                String tema = parts[2].trim();
+                                if (!sesion.equalsIgnoreCase("Sesión") && !sesion.startsWith("---") && !sesion.isEmpty() && !tema.isEmpty()) {
+                                    String lessonTitle = currentModule + " · " + currentWeek + " · Sesión " + sesion + ": " + tema;
+                                    if (lessonTitle.length() > 200) {
+                                        lessonTitle = lessonTitle.substring(0, 197) + "...";
+                                    }
+                                    final String targetTitle = lessonTitle;
+                                    boolean exists = existingLessons.stream()
+                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(targetTitle));
+                                    if (!exists) {
+                                        Lesson l = new Lesson();
+                                        l.setTitle(lessonTitle);
+                                        l.setCompleted(false);
+                                        l.setCourse(course);
+                                        lessons.save(l);
+                                        count++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    System.out.println("Se agregaron " + count + " clases nuevas al curso de Data Analyst.");
+                }
+            } else {
+                System.err.println("No se encontró el archivo de sílabo de Data Analyst en los recursos.");
+            }
+        } catch (Exception e) {
+            System.err.println("Error al leer el archivo de sílabo de Data Analyst: " + e.getMessage());
+        }
     }
 }

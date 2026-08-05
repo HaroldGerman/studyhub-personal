@@ -29,6 +29,11 @@ public class EventController {
         return service.create(body, principal.getName());
     }
 
+    @PutMapping("/{id}")
+    public Event update(@PathVariable UUID id, @Valid @RequestBody EventRequest body, Principal principal) {
+        return service.update(id, body, principal.getName());
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id, Principal principal) {

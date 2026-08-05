@@ -41,6 +41,21 @@ public class EventService {
         return repository.save(event);
     }
 
+    public Event update(UUID id, EventRequest r, String email) {
+        Event event = repository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evento no encontrado"));
+        if (!event.getUser().getEmail().equalsIgnoreCase(email)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acceso no autorizado");
+        }
+        event.setTitle(r.title());
+        event.setDescription(r.description());
+        event.setDateTime(r.dateTime());
+        if (r.color() != null && !r.color().isBlank()) {
+            event.setColor(r.color());
+        }
+        return repository.save(event);
+    }
+
     public void remove(UUID id, String email) {
         Event event = repository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evento no encontrado"));
