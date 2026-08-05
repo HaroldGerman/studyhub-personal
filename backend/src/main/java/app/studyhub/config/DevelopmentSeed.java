@@ -173,6 +173,8 @@ class DevelopmentSeed {
                     String currentWeek = "Semana 1";
                     int count = 0;
                     List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
+                    LocalDateTime baseDateTime = LocalDateTime.of(2026, 7, 27, 8, 0);
+                    int index = 0;
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -199,17 +201,10 @@ class DevelopmentSeed {
                                     !topic.startsWith("---")) {
                                     
                                     String lessonTitle = currentWeek + " · " + day + ": " + topic;
-                                    boolean exists = existingLessons.stream()
-                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
-                                    
-                                    if (!exists) {
-                                        Lesson l = new Lesson();
-                                        l.setTitle(lessonTitle);
-                                        l.setCompleted(false);
-                                        l.setCourse(course);
-                                        lessons.save(l);
+                                    if (saveOrUpdateLesson(lessons, course, lessonTitle, baseDateTime.plusMinutes(index), existingLessons)) {
                                         count++;
                                     }
+                                    index++;
                                 }
                             }
                         }
@@ -250,6 +245,8 @@ class DevelopmentSeed {
                     String currentWeek = "Semana 1";
                     int count = 0;
                     List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
+                    LocalDateTime baseDateTime = LocalDateTime.of(2026, 7, 27, 8, 0);
+                    int index = 0;
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -275,17 +272,10 @@ class DevelopmentSeed {
                                     !topic.startsWith("---")) {
                                     
                                     String lessonTitle = currentWeek + " · " + day + ": " + topic;
-                                    boolean exists = existingLessons.stream()
-                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
-                                    
-                                    if (!exists) {
-                                        Lesson l = new Lesson();
-                                        l.setTitle(lessonTitle);
-                                        l.setCompleted(false);
-                                        l.setCourse(course);
-                                        lessons.save(l);
+                                    if (saveOrUpdateLesson(lessons, course, lessonTitle, baseDateTime.plusMinutes(index), existingLessons)) {
                                         count++;
                                     }
+                                    index++;
                                 }
                             }
                         }
@@ -327,6 +317,8 @@ class DevelopmentSeed {
                     String currentWeek = "";
                     int count = 0;
                     List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
+                    LocalDateTime baseDateTime = LocalDateTime.of(2026, 7, 27, 8, 0);
+                    int index = 0;
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -355,16 +347,10 @@ class DevelopmentSeed {
                             String topic = line.substring(2).trim();
                             if (!topic.isEmpty()) {
                                 String lessonTitle = "Módulo 0 · " + topic;
-                                boolean exists = existingLessons.stream()
-                                    .anyMatch(l -> l.getTitle().equalsIgnoreCase(lessonTitle));
-                                if (!exists) {
-                                    Lesson l = new Lesson();
-                                    l.setTitle(lessonTitle);
-                                    l.setCompleted(false);
-                                    l.setCourse(course);
-                                    lessons.save(l);
+                                if (saveOrUpdateLesson(lessons, course, lessonTitle, baseDateTime.plusMinutes(index), existingLessons)) {
                                     count++;
                                 }
+                                index++;
                             }
                         }
                         if (line.startsWith("|") && line.endsWith("|")) {
@@ -383,17 +369,10 @@ class DevelopmentSeed {
                                     if (lessonTitle.length() > 200) {
                                         lessonTitle = lessonTitle.substring(0, 197) + "...";
                                     }
-                                    final String targetTitle = lessonTitle;
-                                    boolean exists = existingLessons.stream()
-                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(targetTitle));
-                                    if (!exists) {
-                                        Lesson l = new Lesson();
-                                        l.setTitle(lessonTitle);
-                                        l.setCompleted(false);
-                                        l.setCourse(course);
-                                        lessons.save(l);
+                                    if (saveOrUpdateLesson(lessons, course, lessonTitle, baseDateTime.plusMinutes(index), existingLessons)) {
                                         count++;
                                     }
+                                    index++;
                                 }
                             }
                         }
@@ -587,6 +566,8 @@ class DevelopmentSeed {
                     String currentWeek = "Semana 1";
                     int count = 0;
                     List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
+                    LocalDateTime baseDateTime = LocalDateTime.of(2026, 7, 27, 8, 0);
+                    int index = 0;
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -612,17 +593,10 @@ class DevelopmentSeed {
                                     if (lessonTitle.length() > 200) {
                                         lessonTitle = lessonTitle.substring(0, 197) + "...";
                                     }
-                                    final String targetTitle = lessonTitle;
-                                    boolean exists = existingLessons.stream()
-                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(targetTitle));
-                                    if (!exists) {
-                                        Lesson l = new Lesson();
-                                        l.setTitle(lessonTitle);
-                                        l.setCompleted(false);
-                                        l.setCourse(course);
-                                        lessons.save(l);
+                                    if (saveOrUpdateLesson(lessons, course, lessonTitle, baseDateTime.plusMinutes(index), existingLessons)) {
                                         count++;
                                     }
+                                    index++;
                                 }
                             }
                         }
@@ -663,6 +637,8 @@ class DevelopmentSeed {
                     String currentWeek = "Semana 1";
                     int count = 0;
                     List<Lesson> existingLessons = lessons.findByCourseIdOrderByCreatedAtAsc(course.getId());
+                    LocalDateTime baseDateTime = LocalDateTime.of(2026, 7, 27, 8, 0);
+                    int index = 0;
 
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
@@ -695,17 +671,10 @@ class DevelopmentSeed {
                                     if (lessonTitle.length() > 200) {
                                         lessonTitle = lessonTitle.substring(0, 197) + "...";
                                     }
-                                    final String targetTitle = lessonTitle;
-                                    boolean exists = existingLessons.stream()
-                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(targetTitle));
-                                    if (!exists) {
-                                        Lesson l = new Lesson();
-                                        l.setTitle(lessonTitle);
-                                        l.setCompleted(false);
-                                        l.setCourse(course);
-                                        lessons.save(l);
+                                    if (saveOrUpdateLesson(lessons, course, lessonTitle, baseDateTime.plusMinutes(index), existingLessons)) {
                                         count++;
                                     }
+                                    index++;
                                 }
                             }
                         }
@@ -718,5 +687,23 @@ class DevelopmentSeed {
         } catch (Exception e) {
             System.err.println("Error al leer el archivo de sílabo de Javascript: " + e.getMessage());
         }
+    }
+
+    private boolean saveOrUpdateLesson(LessonRepository repository, Course course, String title, LocalDateTime createdAt, List<Lesson> existing) {
+        Lesson l = existing.stream()
+            .filter(exist -> exist.getTitle().equalsIgnoreCase(title))
+            .findFirst()
+            .orElse(null);
+        boolean isNew = false;
+        if (l == null) {
+            l = new Lesson();
+            l.setTitle(title);
+            l.setCompleted(false);
+            l.setCourse(course);
+            isNew = true;
+        }
+        l.setCreatedAt(createdAt);
+        repository.save(l);
+        return isNew;
     }
 }
