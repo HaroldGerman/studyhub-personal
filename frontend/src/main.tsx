@@ -55,6 +55,15 @@ interface CalendarEvent {
   color: string;
 }
 
+interface ScheduleItem {
+  id: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  courseTitle: string;
+  color: string;
+}
+
 // API Fetch Helper
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '';
 
@@ -530,6 +539,7 @@ function App() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -574,6 +584,9 @@ function App() {
 
       const eventList = await apiFetch<CalendarEvent[]>('/api/events');
       setEvents(eventList);
+
+      const scheduleList = await apiFetch<ScheduleItem[]>('/api/schedule');
+      setScheduleItems(scheduleList);
 
       // Generate activity log
       const logs = [];
@@ -835,6 +848,9 @@ function App() {
           <Calendar
             events={events}
             refreshEvents={fetchData}
+            scheduleItems={scheduleItems}
+            refreshSchedule={fetchData}
+            courses={courses}
           />
         )}
 
@@ -1948,10 +1964,16 @@ function Notes({
 // 5. DYNAMIC CALENDAR COMPONENT
 function Calendar({
   events,
-  refreshEvents
+  refreshEvents,
+  scheduleItems,
+  refreshSchedule,
+  courses
 }: {
   events: CalendarEvent[];
   refreshEvents: () => void;
+  scheduleItems: ScheduleItem[];
+  refreshSchedule: () => void;
+  courses: Course[];
 }) {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 6, 1)); // Start on July 2026 for consistency
   const [modalOpen, setModalOpen] = useState(false);
@@ -1961,6 +1983,9 @@ function Calendar({
   const [eventTime, setEventTime] = useState('10:00');
   const [eventColor, setEventColor] = useState('#7257e8');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
+  // View mode: calendar or schedule template
+  const [viewMode, setViewMode] = useState<'calendar' | 'schedule'>('calendar');
 
   // States for modifying the schedule (editing and adding)
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -1972,6 +1997,15 @@ function Calendar({
   const [newBlockTime, setNewBlockTime] = useState('08:00');
   const [newBlockCourse, setNewBlockCourse] = useState('Estudio: Data Engineer');
   const [newBlockColor, setNewBlockColor] = useState('#ffa502');
+
+  // States for Weekly Schedule Template grid
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [schedDay, setSchedDay] = useState('Lunes');
+  const [schedStart, setSchedStart] = useState('08:00');
+  const [schedEnd, setSchedEnd] = useState('11:00');
+  const [schedCourse, setSchedCourse] = useState('Data Engineer');
+  const [schedColor, setSchedColor] = useState('#ffa502');
+  const [schedModalOpen, setSchedModalOpen] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -2113,7 +2147,82 @@ function Calendar({
       alert(err.message);
     }
   };
+  const handleCreateScheduleItem = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/api/schedule', {
+        method: 'POST',
+        body: JSON.stringify({
+          dayOfWeek: schedDay,
+          startTime: schedStart,
+          endTime: schedEnd,
+          courseTitle: schedCourse,
+          color: schedColor
+        })
+      });
+      setSchedModalOpen(false);
+      setEditingScheduleId(null);
+      refreshSchedule();
+      refreshEvents();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
+  const handleUpdateScheduleItem = async (id: string) => {
+    try {
+      await apiFetch(`/api/schedule/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          dayOfWeek: schedDay,
+          startTime: schedStart,
+          endTime: schedEnd,
+          courseTitle: schedCourse,
+          color: schedColor
+        })
+      });
+      setSchedModalOpen(false);
+      setEditingScheduleId(null);
+      refreshSchedule();
+      refreshEvents();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteScheduleItem = async (id: string) => {
+    if (!confirm('¿Eliminar este bloque del horario semanal? Todos los eventos de estudio en el calendario asociados se actualizarán automáticamente.')) return;
+    try {
+      await apiFetch(`/api/schedule/${id}`, {
+        method: 'DELETE'
+      });
+      refreshSchedule();
+      refreshEvents();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+  
+  const scheduleByDay = useMemo(() => {
+    const map: Record<string, ScheduleItem[]> = {
+      'Lunes': [],
+      'Martes': [],
+      'Miércoles': [],
+      'Jueves': [],
+      'Viernes': []
+    };
+    scheduleItems.forEach(item => {
+      if (map[item.dayOfWeek]) {
+        map[item.dayOfWeek].push(item);
+      }
+    });
+    daysOfWeek.forEach(day => {
+      map[day].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    });
+    return map;
+  }, [scheduleItems]);
   const handleAddEventSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!eventTitle.trim() || !eventDate) return;
@@ -2151,71 +2260,208 @@ function Calendar({
           <h1>Calendario</h1>
           <p className="muted">Organiza tus clases, entregas y recordatorios.</p>
         </div>
-        <button className="primary" onClick={() => setModalOpen(true)}>
-          <Plus size={18} /> Agregar evento
-        </button>
+        {viewMode === 'calendar' ? (
+          <button className="primary" onClick={() => setModalOpen(true)}>
+            <Plus size={18} /> Agregar evento
+          </button>
+        ) : (
+          <button className="primary" onClick={() => {
+            setSchedDay('Lunes');
+            setSchedStart('08:00');
+            setSchedEnd('11:00');
+            setSchedCourse('Data Engineer');
+            setSchedColor('#ffa502');
+            setEditingScheduleId(null);
+            setSchedModalOpen(true);
+          }}>
+            <Plus size={18} /> Agregar bloque
+          </button>
+        )}
       </div>
 
-      <div className="calendar glass">
-        <div className="calhead">
-          <b className="capitalize-first">{monthName}</b>
-          <div className="cal-nav-buttons">
-            <button className="nav-arrow" onClick={handlePrevMonth}>‹</button>
-            <button className="nav-today" onClick={() => setCurrentDate(new Date())}>Hoy</button>
-            <button className="nav-arrow" onClick={handleNextMonth}>›</button>
+      {/* Switch mode */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <button 
+            type="button" 
+            style={{ 
+              padding: '6px 16px', 
+              borderRadius: '6px', 
+              border: 'none', 
+              background: viewMode === 'calendar' ? 'var(--primary-color)' : 'transparent', 
+              color: viewMode === 'calendar' ? '#ffffff' : 'var(--text-muted)',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              minWidth: '120px',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => setViewMode('calendar')}
+          >
+            🗓️ Calendario
+          </button>
+          <button 
+            type="button" 
+            style={{ 
+              padding: '6px 16px', 
+              borderRadius: '6px', 
+              border: 'none', 
+              background: viewMode === 'schedule' ? 'var(--primary-color)' : 'transparent', 
+              color: viewMode === 'schedule' ? '#ffffff' : 'var(--text-muted)',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              minWidth: '120px',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => setViewMode('schedule')}
+          >
+            ⏰ Horario Semanal
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'calendar' ? (
+        <div className="calendar glass">
+          <div className="calhead">
+            <b className="capitalize-first">{monthName}</b>
+            <div className="cal-nav-buttons">
+              <button className="nav-arrow" onClick={handlePrevMonth}>‹</button>
+              <button className="nav-today" onClick={() => setCurrentDate(new Date())}>Hoy</button>
+              <button className="nav-arrow" onClick={handleNextMonth}>›</button>
+            </div>
+          </div>
+
+          <div className="week">
+            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(x => (
+              <b key={x}>{x}</b>
+            ))}
+          </div>
+
+          <div className="days">
+            {calendarDays.map((day, i) => {
+              const isToday = day !== null &&
+                new Date().getDate() === day &&
+                new Date().getMonth() === month &&
+                new Date().getFullYear() === year;
+
+              const dayEvents = day ? getEventsForDay(day) : [];
+
+              return (
+                <div 
+                  className={`cal-day-cell cursor-pointer ${day === null ? 'empty-day' : ''} ${isToday ? 'today' : ''}`} 
+                  key={i}
+                  onClick={() => { if (day !== null) setSelectedDay(day); }}
+                >
+                  {day && (
+                    <>
+                      <b className="day-number">{day}</b>
+                      <div className="cell-events">
+                        {dayEvents.map(e => (
+                          <span
+                            key={e.id}
+                            className="cal-event"
+                            style={{ background: `${e.color}18`, color: e.color, borderLeft: `3px solid ${e.color}` }}
+                            onClick={ev => {
+                              ev.stopPropagation();
+                              setSelectedDay(day);
+                            }}
+                          >
+                            {e.title}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
-
-        <div className="week">
-          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(x => (
-            <b key={x}>{x}</b>
-          ))}
-        </div>
-
-        <div className="days">
-          {calendarDays.map((day, i) => {
-            const isToday = day !== null &&
-              new Date().getDate() === day &&
-              new Date().getMonth() === month &&
-              new Date().getFullYear() === year;
-
-            const dayEvents = day ? getEventsForDay(day) : [];
-
+      ) : (
+        <div className="weekly-schedule-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginTop: '16px' }}>
+          {daysOfWeek.map(day => {
+            const items = scheduleByDay[day] || [];
             return (
-              <div 
-                className={`cal-day-cell cursor-pointer ${day === null ? 'empty-day' : ''} ${isToday ? 'today' : ''}`} 
-                key={i}
-                onClick={() => { if (day !== null) setSelectedDay(day); }}
-              >
-                {day && (
-                  <>
-                    <b className="day-number">{day}</b>
-                    <div className="cell-events">
-                      {dayEvents.map(e => (
-                        <span
-                          key={e.id}
-                          className="cal-event"
-                          style={{ background: `${e.color}18`, color: e.color, borderLeft: `3px solid ${e.color}` }}
-                          onClick={ev => {
-                            ev.stopPropagation();
-                            setSelectedDay(day);
-                          }}
-                        >
-                          {e.title}
+              <div key={day} className="weekly-schedule-column glass" style={{ padding: '16px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '4px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>{day}</h3>
+                  <button 
+                    type="button" 
+                    style={{ padding: '4px', minWidth: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary-color)' }}
+                    onClick={() => {
+                      setSchedDay(day);
+                      setSchedStart('08:00');
+                      setSchedEnd('11:00');
+                      setSchedCourse('Data Engineer');
+                      setSchedColor('#ffa502');
+                      setEditingScheduleId(null);
+                      setSchedModalOpen(true);
+                    }}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexGrow: 1, minHeight: '150px' }}>
+                  {items.length === 0 ? (
+                    <p className="muted" style={{ fontSize: '12px', textAlign: 'center', margin: 'auto', color: 'var(--text-muted)' }}>Sin bloques</p>
+                  ) : (
+                    items.map(item => (
+                      <div 
+                        key={item.id} 
+                        style={{ 
+                          padding: '10px 12px', 
+                          borderRadius: '8px', 
+                          border: '1px solid var(--border-color)', 
+                          borderLeft: `4px solid ${item.color}`, 
+                          background: 'rgba(255,255,255,0.02)',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <b style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block', maxWidth: '80%' }}>{item.courseTitle}</b>
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            <button 
+                              type="button" 
+                              style={{ background: 'transparent', border: 'none', padding: '2px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                              onClick={() => {
+                                setEditingScheduleId(item.id);
+                                setSchedDay(item.dayOfWeek);
+                                setSchedStart(item.startTime);
+                                setSchedEnd(item.endTime);
+                                setSchedCourse(item.courseTitle);
+                                setSchedColor(item.color);
+                                setSchedModalOpen(true);
+                              }}
+                            >
+                              <Edit size={12} />
+                            </button>
+                            <button 
+                              type="button" 
+                              style={{ background: 'transparent', border: 'none', padding: '2px', cursor: 'pointer', color: 'var(--danger-color)' }}
+                              onClick={() => handleDeleteScheduleItem(item.id)}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                          🕒 {item.startTime} - {item.endTime}
                         </span>
-                      ))}
-                    </div>
-                  </>
-                )}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
-      </div>
+      )}
 
       {/* Daily Details Modal */}
       {selectedDay !== null && (
-        <div className="overlay" onClick={() => setSelectedDay(null)}>
+        <div className="overlay" onClick={() => { setSelectedDay(null); setEditingEventId(null); }}>
           <div className="modal glass" style={{ width: 'min(500px, 95vw)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div className="modalhead" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
               <div>
@@ -2224,7 +2470,7 @@ function Calendar({
                   {selectedDay} de {currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
                 </p>
               </div>
-              <button type="button" onClick={() => setSelectedDay(null)}><X size={20} /></button>
+              <button type="button" onClick={() => { setSelectedDay(null); setEditingEventId(null); }}><X size={20} /></button>
             </div>
 
             <div className="day-events-list" style={{ maxHeight: '280px', overflowY: 'auto', marginBottom: '16px', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2354,6 +2600,7 @@ function Calendar({
                   <option value="Estudio: Data Engineer">Data Engineer (Mañana)</option>
                   <option value="Estudio: Java Backend">Java Backend (Mediodía)</option>
                   <option value="Estudio: Data Analyst">Data Analyst (Tarde)</option>
+                  <option value="Estudio: Javascript">Javascript (Tarde-Noche)</option>
                   <option value="Estudio: Inglés">Inglés (Noche)</option>
                   <option value="custom">Otro bloque (Personalizado)...</option>
                 </select>
@@ -2390,6 +2637,113 @@ function Calendar({
               <button type="button" className="outline" style={{ padding: '6px 12px', fontSize: '12px', minWidth: '80px' }} onClick={() => { setSelectedDay(null); setEditingEventId(null); }}>Cerrar</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* SchedModal (Weekly Schedule Item Form) */}
+      {schedModalOpen && (
+        <div className="overlay">
+          <form className="modal glass" onSubmit={editingScheduleId ? (e) => { e.preventDefault(); handleUpdateScheduleItem(editingScheduleId); } : handleCreateScheduleItem} style={{ width: 'min(450px, 95vw)' }}>
+            <div className="modalhead" style={{ marginBottom: '16px' }}>
+              <h2>{editingScheduleId ? 'Editar Bloque de Horario' : 'Agregar Bloque de Horario'}</h2>
+              <button type="button" onClick={() => { setSchedModalOpen(false); setEditingScheduleId(null); }}><X size={20} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600 }}>Día de la Semana</label>
+                <select 
+                  value={schedDay} 
+                  onChange={e => setSchedDay(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '13px' }}
+                >
+                  {daysOfWeek.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600 }}>Hora Inicio</label>
+                  <input 
+                    type="time" 
+                    value={schedStart} 
+                    onChange={e => setSchedStart(e.target.value)} 
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '13px' }} 
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600 }}>Hora Fin</label>
+                  <input 
+                    type="time" 
+                    value={schedEnd} 
+                    onChange={e => setSchedEnd(e.target.value)} 
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '13px' }} 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600 }}>Curso / Actividad</label>
+                <select 
+                  value={schedCourse} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    setSchedCourse(val);
+                    if (val === 'Data Engineer') setSchedColor('#ffa502');
+                    else if (val === 'Java') setSchedColor('#7257e8');
+                    else if (val === 'Data Analyst') setSchedColor('#3f80ea');
+                    else if (val === 'Javascript') setSchedColor('#f7df1e');
+                    else if (val === 'Inglés') setSchedColor('#ff4757');
+                  }}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '13px' }}
+                >
+                  <option value="Data Engineer">Data Engineer</option>
+                  <option value="Java">Java Backend</option>
+                  <option value="Data Analyst">Data Analyst</option>
+                  <option value="Javascript">Javascript</option>
+                  <option value="Inglés">Inglés</option>
+                  <option value="custom">Otro (Personalizado)...</option>
+                </select>
+              </div>
+
+              {schedCourse === 'custom' && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Nombre del bloque" 
+                    onChange={e => setSchedCourse(e.target.value)}
+                    style={{ flexGrow: 1, padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-main)', fontSize: '13px' }} 
+                  />
+                  <input 
+                    type="color" 
+                    value={schedColor} 
+                    onChange={e => setSchedColor(e.target.value)} 
+                    style={{ width: '40px', height: '35px', border: 'none', padding: 0, cursor: 'pointer', background: 'transparent' }} 
+                  />
+                </div>
+              )}
+
+              {schedCourse !== 'custom' && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600 }}>Color Identificador</label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input 
+                      type="color" 
+                      value={schedColor} 
+                      onChange={e => setSchedColor(e.target.value)} 
+                      style={{ width: '40px', height: '35px', border: 'none', padding: 0, cursor: 'pointer', background: 'transparent' }} 
+                    />
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Puedes ajustar el color por defecto</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modalactions" style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button type="button" className="outline" onClick={() => { setSchedModalOpen(false); setEditingScheduleId(null); }}>Cancelar</button>
+              <button type="submit" className="primary">{editingScheduleId ? 'Guardar Cambios' : 'Agregar'}</button>
+            </div>
+          </form>
         </div>
       )}
 

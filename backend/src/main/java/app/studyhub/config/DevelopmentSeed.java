@@ -11,6 +11,9 @@ import app.studyhub.infrastructure.CourseRepository;
 import app.studyhub.infrastructure.LessonRepository;
 import app.studyhub.infrastructure.EventRepository;
 import app.studyhub.infrastructure.NoteRepository;
+import app.studyhub.domain.ScheduleItem;
+import app.studyhub.infrastructure.ScheduleItemRepository;
+import app.studyhub.application.ScheduleService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +35,8 @@ class DevelopmentSeed {
         LessonRepository lessons,
         EventRepository events,
         NoteRepository noteRepository,
+        ScheduleItemRepository scheduleItemRepository,
+        ScheduleService scheduleService,
         PasswordEncoder encoder
     ) {
         return a -> {
@@ -49,6 +54,7 @@ class DevelopmentSeed {
                 .filter(c -> !c.getTitle().equalsIgnoreCase("Java") 
                           && !c.getTitle().equalsIgnoreCase("Inglés") 
                           && !c.getTitle().equalsIgnoreCase("Data Analyst")
+                          && !c.getTitle().equalsIgnoreCase("Javascript")
                           && !c.getTitle().equalsIgnoreCase("Data Engineer"))
                 .forEach(c -> {
                     System.out.println("Eliminando curso no deseado: " + c.getTitle());
@@ -62,55 +68,74 @@ class DevelopmentSeed {
             seedEnglish(user, courses, lessons);
             seedDataEngineer(user, courses, lessons);
             seedDataAnalyst(user, courses, lessons);
+            seedJavascript(user, courses, lessons);
 
             // 4. Seed Recovered Notes (from lost H2 memory state)
             seedRecoveredNotes(user, courses, lessons, noteRepository);
 
-            // 5. Seed Schedule (Events)
-            seedSchedule(user, events);
+            // 5. Seed Weekly Schedule template if empty
+            List<ScheduleItem> currentSchedule = scheduleItemRepository.findByUserEmail(user.getEmail());
+            if (currentSchedule.isEmpty()) {
+                System.out.println("Sembrando horario semanal por defecto...");
+                String[] days = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes"};
+                for (String day : days) {
+                    // Data Engineer (08:00 - 11:00)
+                    ScheduleItem de = new ScheduleItem();
+                    de.setDayOfWeek(day);
+                    de.setStartTime("08:00");
+                    de.setEndTime("11:00");
+                    de.setCourseTitle("Data Engineer");
+                    de.setColor("#ffa502");
+                    de.setUser(user);
+                    scheduleItemRepository.save(de);
+
+                    // Java Backend (11:30 - 14:30)
+                    ScheduleItem java = new ScheduleItem();
+                    java.setDayOfWeek(day);
+                    java.setStartTime("11:30");
+                    java.setEndTime("14:30");
+                    java.setCourseTitle("Java");
+                    java.setColor("#7257e8");
+                    java.setUser(user);
+                    scheduleItemRepository.save(java);
+
+                    // Data Analyst (15:00 - 17:00)
+                    ScheduleItem da = new ScheduleItem();
+                    da.setDayOfWeek(day);
+                    da.setStartTime("15:00");
+                    da.setEndTime("17:00");
+                    da.setCourseTitle("Data Analyst");
+                    da.setColor("#3f80ea");
+                    da.setUser(user);
+                    scheduleItemRepository.save(da);
+
+                    // Javascript (17:00 - 18:30)
+                    ScheduleItem js = new ScheduleItem();
+                    js.setDayOfWeek(day);
+                    js.setStartTime("17:00");
+                    js.setEndTime("18:30");
+                    js.setCourseTitle("Javascript");
+                    js.setColor("#f7df1e");
+                    js.setUser(user);
+                    scheduleItemRepository.save(js);
+
+                    // Inglés (18:30 - 20:00)
+                    ScheduleItem eng = new ScheduleItem();
+                    eng.setDayOfWeek(day);
+                    eng.setStartTime("18:30");
+                    eng.setEndTime("20:00");
+                    eng.setCourseTitle("Inglés");
+                    eng.setColor("#ff4757");
+                    eng.setUser(user);
+                    scheduleItemRepository.save(eng);
+                }
+            }
+
+            // Sync schedule to calendar events
+            scheduleService.syncCalendarEvents(user.getEmail());
         };
     }
 
-    private void seedSchedule(User user, EventRepository eventRepository) {
-        System.out.println("Actualizando horario de estudio en el calendario...");
-        List<Event> existingStudyEvents = eventRepository.findByUserEmailOrderByDateTimeAsc(user.getEmail()).stream()
-            .filter(e -> e.getTitle().startsWith("Estudio:"))
-            .toList();
-        eventRepository.deleteAll(existingStudyEvents);
-
-        LocalDate startDate = LocalDate.of(2026, 7, 27); // Lunes, 27 de Julio 2026
-        int count = 0;
-        for (int w = 0; w < 4; w++) {
-            for (int d = 0; d < 5; d++) { // Lunes a Viernes
-                LocalDate date = startDate.plusWeeks(w).plusDays(d);
-
-                // Data Engineer (Lunes a Viernes 08:00 - 11:00)
-                createEvent(user, eventRepository, "Estudio: Data Engineer", 
-                    "Linux, SQL, Python, orquestación, Spark o modelado de pipelines.", 
-                    date.atTime(8, 0), "#ffa502");
-                count++;
-
-                // Java Backend (Lunes a Viernes 11:30 - 14:30)
-                createEvent(user, eventRepository, "Estudio: Java Backend", 
-                    "Microservicios con Spring Boot, seguridad REST y testing unitario.", 
-                    date.atTime(11, 30), "#7257e8");
-                count++;
-
-                // Data Analyst (Lunes a Viernes 15:00 - 17:00)
-                createEvent(user, eventRepository, "Estudio: Data Analyst", 
-                    "Análisis exploratorio, tableros interactivos, consultas SQL complejas o dashboards.", 
-                    date.atTime(15, 0), "#3f80ea");
-                count++;
-
-                // Inglés (Lunes a Viernes 18:30 - 20:00)
-                createEvent(user, eventRepository, "Estudio: Inglés", 
-                    "Conversación, vocabulario técnico y listening activo.", 
-                    date.atTime(18, 30), "#ff4757");
-                count++;
-            }
-        }
-        System.out.println("Se registraron " + count + " bloques de estudio actualizados en el calendario.");
-    }
 
     private void createEvent(User user, EventRepository eventRepository, String title, String desc, LocalDateTime dt, String color) {
         Event e = new Event();
@@ -609,6 +634,89 @@ class DevelopmentSeed {
             }
         } catch (Exception e) {
             System.err.println("Error al leer el archivo de sílabo de Data Analyst: " + e.getMessage());
+        }
+    }
+
+    private void seedJavascript(User user, CourseRepository courses, LessonRepository lessons) {
+        Course course = courses.findByUserEmail(user.getEmail()).stream()
+            .filter(c -> c.getCode().equalsIgnoreCase("JS-101") || c.getTitle().equalsIgnoreCase("Javascript"))
+            .findFirst()
+            .orElseGet(() -> {
+                Course c = new Course();
+                c.setTitle("Javascript");
+                c.setCode("JS-101");
+                c.setProfessor("Antigravity JS");
+                c.setUniversity("StudyHub Academy");
+                c.setPlatform("Local");
+                c.setColor("#f7df1e");
+                c.setIcon("💛");
+                c.setUser(user);
+                c.setStatus(CourseStatus.NOT_STARTED);
+                return courses.save(c);
+            });
+
+        try (InputStream is = getClass().getResourceAsStream("/syllabi/javascript.md")) {
+            if (is != null) {
+                System.out.println("Cargando sílabo de Javascript desde recursos...");
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                    String line;
+                    String currentWeek = "Semana 1";
+                    int count = 0;
+                    List<Lesson> existingLessons = lessons.findByCourseId(course.getId());
+
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.startsWith("*") && line.contains("**Semana")) {
+                            int startIdx = line.indexOf("**");
+                            int endIdx = line.lastIndexOf("**");
+                            if (startIdx != -1 && endIdx != -1 && endIdx > startIdx) {
+                                String cleanWeek = line.substring(startIdx + 2, endIdx).trim();
+                                int colonIdx = cleanWeek.indexOf(":");
+                                if (colonIdx != -1) {
+                                    currentWeek = cleanWeek.substring(0, colonIdx).trim();
+                                } else {
+                                    currentWeek = cleanWeek;
+                                }
+                            }
+                        }
+                        if (line.startsWith("*") && line.contains("*") && line.contains(":") && !line.contains("**Semana")) {
+                            String clean = line.replace("*", "").trim();
+                            if (clean.startsWith("-")) {
+                                clean = clean.substring(1).trim();
+                            }
+                            
+                            int colonIdx = clean.indexOf(":");
+                            if (colonIdx != -1) {
+                                String dayPart = clean.substring(0, colonIdx).trim();
+                                String topicPart = clean.substring(colonIdx + 1).trim();
+                                
+                                if (!dayPart.isEmpty() && !topicPart.isEmpty()) {
+                                    String lessonTitle = currentWeek + " · " + dayPart + ": " + topicPart;
+                                    if (lessonTitle.length() > 200) {
+                                        lessonTitle = lessonTitle.substring(0, 197) + "...";
+                                    }
+                                    final String targetTitle = lessonTitle;
+                                    boolean exists = existingLessons.stream()
+                                        .anyMatch(l -> l.getTitle().equalsIgnoreCase(targetTitle));
+                                    if (!exists) {
+                                        Lesson l = new Lesson();
+                                        l.setTitle(lessonTitle);
+                                        l.setCompleted(false);
+                                        l.setCourse(course);
+                                        lessons.save(l);
+                                        count++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    System.out.println("Se agregaron " + count + " clases nuevas al curso de Javascript.");
+                }
+            } else {
+                System.err.println("No se encontró el archivo de sílabo de Javascript en los recursos.");
+            }
+        } catch (Exception e) {
+            System.err.println("Error al leer el archivo de sílabo de Javascript: " + e.getMessage());
         }
     }
 }
