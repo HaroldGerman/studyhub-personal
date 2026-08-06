@@ -1218,6 +1218,7 @@ function CourseDetail({
   const [isMaximized, setIsMaximized] = useState(false);
   const [editorWidthPercent, setEditorWidthPercent] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
+  const escHandlerRef = useRef<(() => void) | null>(null);
 
   const handleDividerMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -1311,6 +1312,23 @@ function CourseDetail({
     return () => {
       document.body.style.overflow = '';
     };
+  }, [activeLesson]);
+
+  escHandlerRef.current = () => {
+    handleSaveLessonNote();
+    setActiveLesson(null);
+    setIsMaximized(false);
+  };
+
+  useEffect(() => {
+    if (!activeLesson) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        escHandlerRef.current?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeLesson]);
 
   const loadCourseDetails = async () => {
@@ -1635,7 +1653,7 @@ function CourseDetail({
       </div>
 
       {activeLesson && lessonNote && (
-        <div className="overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMaximized ? '0' : '20px', padding: isMaximized ? '0' : '20px' }} onClick={() => { handleSaveLessonNote(); setActiveLesson(null); setIsMaximized(false); }}>
+        <div className="overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMaximized ? '0' : '20px', padding: isMaximized ? '0' : '20px' }}>
           <div className="modal glass" style={{ width: isMaximized ? (showScratchpad ? `calc(100vw - ${scratchpadWidth}px)` : '100vw') : (showScratchpad ? 'min(700px, 60vw)' : 'min(1000px, 95vw)'), height: isMaximized ? '100vh' : '90vh', maxWidth: 'none', borderRadius: isMaximized ? '0' : '16px', display: 'flex', flexDirection: 'column', transition: 'all 0.3s ease' }} onClick={e => e.stopPropagation()}>
             <div className="modalhead" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '8px' }}>
               <div>
